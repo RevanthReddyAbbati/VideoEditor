@@ -6,7 +6,8 @@
     <title>Professional Video Editor Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     
     <style>
         body {
@@ -46,8 +47,8 @@
                 </div>
                 <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">ClipCraft Studio</span>
             </div>
-            <div class="text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700/50 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Client-Side Processing
+            <div id="engine-status" class="text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700/50 flex items-center gap-2">
+                <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> <span id="status-text">Booting Engine...</span>
             </div>
         </div>
     </header>
@@ -121,12 +122,12 @@
 
             <div class="mt-4 border-t border-slate-800 pt-6">
                 <button id="process-btn" disabled class="w-full py-4 px-6 rounded-xl bg-slate-800 text-slate-500 cursor-not-allowed font-semibold tracking-wide transition-all duration-300 flex items-center justify-center gap-3">
-                    Select a Video First
+                    Initializing Engine...
                 </button>
                 
                 <div id="progress-container" class="hidden mt-4">
                     <div class="flex justify-between text-xs text-slate-400 mb-1">
-                        <span>Encoding pipeline active...</span>
+                        <span id="pipeline-status-text">Encoding pipeline active...</span>
                         <span id="progress-percentage">0%</span>
                     </div>
                     <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
@@ -146,7 +147,12 @@
 
     <script>
         const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
+        
+        // Force loading the single-threaded core that works safely anywhere without custom COOP/COEP server headers
+        const ffmpeg = createFFmpeg({
+            log: true,
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+        });
 
         // DOM Elements
         const dropzone = document.getElementById('dropzone');
@@ -160,27 +166,44 @@
         const progressBar = document.getElementById('progress-bar');
         const progressPercentage = document.getElementById('progress-percentage');
         const progressContainer = document.getElementById('progress-container');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const pipelineStatusText = document.getElementById('pipeline-status-text');
 
         // State Tracking variables
         let selectedFile = null;
         let activeSpeed = 1.0;
         let isCropActive = false;
         let cropRatio = 'none';
+        let isEngineReady = false;
 
         // Initialize FFmpeg Engine
         async function initFFmpeg() {
-            if (!ffmpeg.isLoaded()) {
-                try {
+            try {
+                if (!ffmpeg.isLoaded()) {
                     await ffmpeg.load();
-                    console.log("FFmpeg successfully loaded.");
-                } catch(e) {
-                    console.error("FFmpeg loading context failed: ", e);
                 }
+                isEngineReady = true;
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                statusText.innerText = "Engine Ready";
+                
+                if (!selectedFile) {
+                    processBtn.innerText = "Select a Video First";
+                } else {
+                    enableProcessButton();
+                }
+            } catch(e) {
+                console.error("FFmpeg fallback initialization error: ", e);
+                statusDot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
+                statusText.innerText = "Engine Error";
+                processBtn.innerText = "Initialization Failed";
             }
         }
+        
+        // Start load immediately
         initFFmpeg();
 
-        // Track precise background WebAssembly encoding progress logs
+        // Track accurate runtime parsing percentages
         ffmpeg.setProgress(({ ratio }) => {
             let percentage = Math.round(ratio * 100);
             if(percentage >= 0 && percentage <= 100) {
@@ -189,7 +212,7 @@
             }
         });
 
-        // Trigger native OS dialog selector
+        // Click trigger linkage
         dropzone.addEventListener('click', () => {
             videoInput.click();
         });
@@ -232,12 +255,18 @@
             player.src = blobUrl;
             player.load();
             
+            if (isEngineReady) {
+                enableProcessButton();
+            }
+        }
+
+        function enableProcessButton() {
             processBtn.disabled = false;
             processBtn.className = "w-full py-4 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold tracking-wide transition-all duration-300 transform active:scale-[0.99] flex items-center justify-center gap-3 shadow-lg shadow-blue-500/20 cursor-pointer";
             processBtn.innerText = "Export Master Video";
         }
 
-        // Speed Adjustment Buttons Selectors
+        // Speed Adjustment Array Set Selection
         document.querySelectorAll('.speed-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.speed-btn').forEach(b => b.className = "speed-btn py-2 text-sm font-medium bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-all");
@@ -247,7 +276,7 @@
             });
         });
 
-        // Toggle Crop View Window
+        // Toggle Crop Mask Viewports
         toggleCropBtn.addEventListener('click', () => {
             isCropActive = !isCropActive;
             if(isCropActive) {
@@ -287,35 +316,34 @@
             }
         }
 
-        // Export Processing & Download Execution Pipeline
+        // Export Transcode Processing Core Pipeline Loop
         processBtn.addEventListener('click', async () => {
-            if (!selectedFile) return;
+            if (!selectedFile || !isEngineReady) return;
 
             processBtn.disabled = true;
             processBtn.innerText = "Processing Pipeline Active...";
             progressContainer.classList.remove('hidden');
             progressBar.style.width = `0%`;
             progressPercentage.innerText = `0%`;
+            pipelineStatusText.innerText = "Preparing assets...";
 
             const inputName = 'input_video.mp4';
             const outputName = 'edited_output.mp4';
 
             try {
-                // Ensure engine is loaded before mounting virtual space
-                await initFFmpeg();
-
-                // Mount file system
+                // Read input binary data stream
+                pipelineStatusText.innerText = "Mounting video buffer...";
                 ffmpeg.FS('writeFile', inputName, await fetchFile(selectedFile));
 
                 let args = ['-i', inputName];
                 let videoFilters = [];
                 
-                // 1. Build video tempo parameters
+                // Video Speed Configuration Mapping
                 if (activeSpeed === 0.5) videoFilters.push("setpts=2.0*PTS");
                 else if (activeSpeed === 1.5) videoFilters.push("setpts=0.6666666666666666*PTS");
                 else if (activeSpeed === 2.0) videoFilters.push("setpts=0.5*PTS");
 
-                // 2. Build aspect ratio cropping parameters 
+                // Cropping Configuration Mapping
                 if(isCropActive && cropRatio !== 'none') {
                     if(cropRatio === '1:1') videoFilters.push("crop=ih:ih:(iw-out_w)/2:0");
                     if(cropRatio === '16:9') videoFilters.push("crop=iw:iw*(9/16):0:(ih-out_h)/2");
@@ -326,28 +354,29 @@
                     args.push('-vf', videoFilters.join(','));
                 }
 
-                // 3. Audio pipeline logic branch (FIXED CRASH CONDITION HERE)
+                // Audio configuration parameters setup
                 if (muteCheckbox.checked) {
-                    args.push('-an'); // Stript audio completely. No conflicting audio filter flags will be called.
+                    args.push('-an'); // Safely strips track to completely ensure zero silent crashes
                 } else {
-                    // Only apply audio filters if track is NOT muted
                     if (activeSpeed === 0.5) args.push('-af', 'atempo=0.5');
                     if (activeSpeed === 1.5) args.push('-af', 'atempo=1.5');
                     if (activeSpeed === 2.0) args.push('-af', 'atempo=2.0');
                 }
 
-                // 4. Quality settings (CRF 18 preserves high visual fidelity seamlessly)
-                args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'ultrafast', outputName);
+                // Output properties configuration matrix (CRF 18 offers visually pristine outcomes)
+                // Swapped to standard libx264 setup optimized for browser WASM performance architectures
+                args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', outputName);
 
-                // Run WebAssembly transcoding processing mapping
+                pipelineStatusText.innerText = "Encoding via WebAssembly...";
                 await ffmpeg.run(...args);
 
-                // Fetch output binary block buffer array
+                // Compilation output delivery file block structure arrays
+                pipelineStatusText.innerText = "Finalizing compilation file...";
                 const data = ffmpeg.FS('readFile', outputName);
                 const blob = new Blob([data.buffer], { type: 'video/mp4' });
                 const url = URL.createObjectURL(blob);
                 
-                // Simulate automatic dynamic master click download routine
+                // Automatic clean programmatic download anchor setup execution loops
                 const downloadAnchor = document.createElement('a');
                 downloadAnchor.href = url;
                 downloadAnchor.download = `clipcraft_studio_export_${Date.now()}.mp4`;
@@ -355,15 +384,15 @@
                 downloadAnchor.click();
                 document.body.removeChild(downloadAnchor);
 
-                // Housekeeping Virtual System cleanups
+                // Virtual Memory Workspace Flush Unlink
                 ffmpeg.FS('unlink', inputName);
                 ffmpeg.FS('unlink', outputName);
 
             } catch (error) {
-                console.error("Pipeline breakdown tracked: ", error);
-                alert("An error occurred during video compilation. Please check browser developer logs.");
+                console.error("Critical error in engine pipeline processing context sequence: ", error);
+                alert("An error occurred during transcoding. Please open developer tools console logs.");
             } finally {
-                // UI Restoration Reset Matrix
+                // Restore Control State Matrix Elements
                 processBtn.disabled = false;
                 processBtn.innerText = "Export Master Video";
                 progressContainer.classList.add('hidden');
