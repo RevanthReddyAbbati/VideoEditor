@@ -32,7 +32,7 @@
             position: absolute;
             cursor: move;
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-            pointer-events: none; /* Prevents interference with video player clicks */
+            pointer-events: none;
         }
     </style>
 </head>
@@ -68,7 +68,7 @@
                     <p class="text-base font-medium text-slate-200">Drag and drop your video file here</p>
                     <p class="text-xs text-slate-400 mt-1">Supports MP4, MOV, MKV, WebM etc.</p>
                 </div>
-                <button type="button" id="browse-btn" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-lg shadow-blue-600/10 transition-colors pointer-events-none">
+                <button type="button" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-lg shadow-blue-600/10 transition-colors pointer-events-none">
                     Browse Files
                 </button>
             </div>
@@ -180,7 +180,7 @@
         }
         initFFmpeg();
 
-        // Listen for internal conversion logs to report percentage values
+        // Track precise background WebAssembly encoding progress logs
         ffmpeg.setProgress(({ ratio }) => {
             let percentage = Math.round(ratio * 100);
             if(percentage >= 0 && percentage <= 100) {
@@ -189,8 +189,8 @@
             }
         });
 
-        // Safe Click trigger logic
-        dropzone.addEventListener('click', (e) => {
+        // Trigger native OS dialog selector
+        dropzone.addEventListener('click', () => {
             videoInput.click();
         });
 
@@ -200,7 +200,7 @@
             }
         });
 
-        // Drag Drop Event Pipeline
+        // Drag & Drop Pipeline Events
         dropzone.addEventListener('dragover', (e) => { 
             e.preventDefault(); 
             dropzone.classList.add('border-blue-500', 'bg-slate-800/20'); 
@@ -220,27 +220,24 @@
 
         function handleFileSelection(file) {
             if (!file || !file.type.startsWith('video/')) {
-                alert('Please upload a valid native video file format.');
+                alert('Please upload a valid video asset file format.');
                 return;
             }
             selectedFile = file;
             
-            // UI State Transitions
             dropzone.classList.add('hidden');
             editorView.classList.remove('hidden');
             
-            // Load file stream into player preview
             const blobUrl = URL.createObjectURL(file);
             player.src = blobUrl;
             player.load();
             
-            // Activate Process Button
             processBtn.disabled = false;
             processBtn.className = "w-full py-4 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold tracking-wide transition-all duration-300 transform active:scale-[0.99] flex items-center justify-center gap-3 shadow-lg shadow-blue-500/20 cursor-pointer";
             processBtn.innerText = "Export Master Video";
         }
 
-        // Tempo Control Button Selectors Matrix
+        // Speed Adjustment Buttons Selectors
         document.querySelectorAll('.speed-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.speed-btn').forEach(b => b.className = "speed-btn py-2 text-sm font-medium bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-all");
@@ -250,7 +247,7 @@
             });
         });
 
-        // Toggle Visual Mock Crop Mask Layer
+        // Toggle Crop View Window
         toggleCropBtn.addEventListener('click', () => {
             isCropActive = !isCropActive;
             if(isCropActive) {
@@ -290,77 +287,88 @@
             }
         }
 
-        // Export Processing Pipeline
+        // Export Processing & Download Execution Pipeline
         processBtn.addEventListener('click', async () => {
             if (!selectedFile) return;
 
             processBtn.disabled = true;
             processBtn.innerText = "Processing Pipeline Active...";
             progressContainer.classList.remove('hidden');
+            progressBar.style.width = `0%`;
+            progressPercentage.innerText = `0%`;
 
             const inputName = 'input_video.mp4';
             const outputName = 'edited_output.mp4';
 
-            // Mount file system
-            ffmpeg.FS('writeFile', inputName, await fetchFile(selectedFile));
+            try {
+                // Ensure engine is loaded before mounting virtual space
+                await initFFmpeg();
 
-            let args = ['-i', inputName];
-            let videoFilter = "";
-            
-            // Build tempo adjustments
-            if (activeSpeed === 0.5) videoFilter += "setpts=2.0*PTS";
-            else if (activeSpeed === 1.0) videoFilter += "setpts=1.0*PTS";
-            else if (activeSpeed === 1.5) videoFilter += "setpts=0.66*PTS";
-            else if (activeSpeed === 2.0) videoFilter += "setpts=0.5*PTS";
+                // Mount file system
+                ffmpeg.FS('writeFile', inputName, await fetchFile(selectedFile));
 
-            // Add dynamic aspect ratio cropping profiles 
-            if(isCropActive && cropRatio !== 'none') {
-                if(cropRatio === '1:1') videoFilter += ",crop=in_h:in_h:in_w/2-out_w/2:0";
-                if(cropRatio === '16:9') videoFilter += ",crop=in_w:in_w*(9/16):0:in_h/2-out_h/2";
-                if(cropRatio === '9:16') videoFilter += ",crop=in_h*(9/16):in_h:in_w/2-out_w/2:0";
+                let args = ['-i', inputName];
+                let videoFilters = [];
+                
+                // 1. Build video tempo parameters
+                if (activeSpeed === 0.5) videoFilters.push("setpts=2.0*PTS");
+                else if (activeSpeed === 1.5) videoFilters.push("setpts=0.6666666666666666*PTS");
+                else if (activeSpeed === 2.0) videoFilters.push("setpts=0.5*PTS");
+
+                // 2. Build aspect ratio cropping parameters 
+                if(isCropActive && cropRatio !== 'none') {
+                    if(cropRatio === '1:1') videoFilters.push("crop=ih:ih:(iw-out_w)/2:0");
+                    if(cropRatio === '16:9') videoFilters.push("crop=iw:iw*(9/16):0:(ih-out_h)/2");
+                    if(cropRatio === '9:16') videoFilters.push("crop=ih*(9/16):ih:(iw-out_w)/2:0");
+                }
+
+                if(videoFilters.length > 0) {
+                    args.push('-vf', videoFilters.join(','));
+                }
+
+                // 3. Audio pipeline logic branch (FIXED CRASH CONDITION HERE)
+                if (muteCheckbox.checked) {
+                    args.push('-an'); // Stript audio completely. No conflicting audio filter flags will be called.
+                } else {
+                    // Only apply audio filters if track is NOT muted
+                    if (activeSpeed === 0.5) args.push('-af', 'atempo=0.5');
+                    if (activeSpeed === 1.5) args.push('-af', 'atempo=1.5');
+                    if (activeSpeed === 2.0) args.push('-af', 'atempo=2.0');
+                }
+
+                // 4. Quality settings (CRF 18 preserves high visual fidelity seamlessly)
+                args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'ultrafast', outputName);
+
+                // Run WebAssembly transcoding processing mapping
+                await ffmpeg.run(...args);
+
+                // Fetch output binary block buffer array
+                const data = ffmpeg.FS('readFile', outputName);
+                const blob = new Blob([data.buffer], { type: 'video/mp4' });
+                const url = URL.createObjectURL(blob);
+                
+                // Simulate automatic dynamic master click download routine
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.href = url;
+                downloadAnchor.download = `clipcraft_studio_export_${Date.now()}.mp4`;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+
+                // Housekeeping Virtual System cleanups
+                ffmpeg.FS('unlink', inputName);
+                ffmpeg.FS('unlink', outputName);
+
+            } catch (error) {
+                console.error("Pipeline breakdown tracked: ", error);
+                alert("An error occurred during video compilation. Please check browser developer logs.");
+            } finally {
+                // UI Restoration Reset Matrix
+                processBtn.disabled = false;
+                processBtn.innerText = "Export Master Video";
+                progressContainer.classList.add('hidden');
+                progressBar.style.width = `0%`;
             }
-
-            if(videoFilter !== "") {
-                args.push('-vf', videoFilter);
-            }
-
-            // Audio track stripping or resampling speed adjustments
-            if (muteCheckbox.checked) {
-                args.push('-an');
-            } else {
-                if (activeSpeed === 0.5) args.push('-af', 'atempo=0.5');
-                if (activeSpeed === 1.5) args.push('-af', 'atempo=1.5');
-                if (activeSpeed === 2.0) args.push('-af', 'atempo=2.0');
-            }
-
-            // Constant Rate Factor (CRF 18) flags down absolute visually lossless master quality outputs
-            args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'ultrafast', outputName);
-
-            // Fire WebAssembly transcode engine
-            await ffmpeg.run(...args);
-
-            // Fetch compiled binary tracking block buffer
-            const data = ffmpeg.FS('readFile', outputName);
-            const blob = new Blob([data.buffer], { type: 'video/mp4' });
-            const url = URL.createObjectURL(blob);
-            
-            // Auto download execution
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.href = url;
-            downloadAnchor.download = `clipcraft_studio_export_${Date.now()}.mp4`;
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            document.body.removeChild(downloadAnchor);
-
-            // Memory Unlink Cleanup Task loops
-            ffmpeg.FS('unlink', inputName);
-            ffmpeg.FS('unlink', outputName);
-
-            // UI Reset
-            processBtn.disabled = false;
-            processBtn.innerText = "Export Master Video";
-            progressContainer.classList.add('hidden');
-            progressBar.style.width = `0%`;
         });
     </script>
 </body>
