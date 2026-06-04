@@ -14,7 +14,7 @@
             background-color: #0f172a;
             color: #f8fafc;
         }
-        /* Custom scrollbar for professional look */
+        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -32,10 +32,11 @@
             position: absolute;
             cursor: move;
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            pointer-events: none; /* Prevents interference with video player clicks */
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between pb-16">
+<body class="min-h-screen flex flex-col justify-between pb-20">
 
     <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
@@ -55,19 +56,21 @@
         
         <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[450px] relative overflow-hidden shadow-2xl">
             
+            <input type="file" id="video-input" accept="video/*" class="hidden">
+
             <div id="dropzone" class="w-full h-full min-h-[400px] border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group p-6">
-                <input type="file" id="video-input" accept="video/*" class="hidden">
                 <div class="p-4 bg-slate-800/50 rounded-full group-hover:scale-110 transition-transform">
-                    svg file...
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-400 group-hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                 </div>
-                <div class="text-center">
+                <div class="text-center pointer-events-none">
                     <p class="text-base font-medium text-slate-200">Drag and drop your video file here</p>
                     <p class="text-xs text-slate-400 mt-1">Supports MP4, MOV, MKV, WebM etc.</p>
                 </div>
-                <button class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-lg shadow-blue-600/10 transition-colors">Browse Files</button>
+                <button type="button" id="browse-btn" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-lg shadow-blue-600/10 transition-colors pointer-events-none">
+                    Browse Files
+                </button>
             </div>
 
             <div id="editor-view" class="hidden w-full flex flex-col items-center relative">
@@ -75,7 +78,7 @@
                     <video id="video-player" controls class="max-h-[500px] w-full object-contain"></video>
                     <div id="crop-overlay" class="crop-box hidden" style="top: 10%; left: 10%; width: 80%; height: 80%;"></div>
                 </div>
-                <p class="text-xs text-slate-500 mt-2">Preview changes layout dynamic to configuration.</p>
+                <p class="text-xs text-slate-500 mt-2">Preview changes layout dynamically based on settings.</p>
             </div>
         </div>
 
@@ -143,10 +146,9 @@
 
     <script>
         const { createFFmpeg, fetchFile } = FFmpeg;
-        // Setting logs to true allows us to parse progress stats perfectly from WebAssembly native hooks
         const ffmpeg = createFFmpeg({ log: true });
 
-        // Elements
+        // DOM Elements
         const dropzone = document.getElementById('dropzone');
         const videoInput = document.getElementById('video-input');
         const editorView = document.getElementById('editor-view');
@@ -163,8 +165,7 @@
         let selectedFile = null;
         let activeSpeed = 1.0;
         let isCropActive = false;
-        let cropRatio = 'none'; // 'none', '1:1', '16:9', '9:16'
-        let duration = 0;
+        let cropRatio = 'none';
 
         // Initialize FFmpeg Engine
         async function initFFmpeg() {
@@ -173,14 +174,13 @@
                     await ffmpeg.load();
                     console.log("FFmpeg successfully loaded.");
                 } catch(e) {
-                    alert("SharedArrayBuffer header context missing. Download features might fall back depending on your security matrix.");
-                    console.error(e);
+                    console.error("FFmpeg loading context failed: ", e);
                 }
             }
         }
         initFFmpeg();
 
-        // Listen for internal execution logging frames to extract explicit current execution progress
+        // Listen for internal conversion logs to report percentage values
         ffmpeg.setProgress(({ ratio }) => {
             let percentage = Math.round(ratio * 100);
             if(percentage >= 0 && percentage <= 100) {
@@ -189,43 +189,55 @@
             }
         });
 
-        // Trigger file selections
-        dropzone.addEventListener('click', () => videoInput.click());
-        videoInput.addEventListener('change', (e) => handleFileSelection(e.target.files[0]));
+        // Safe Click trigger logic
+        dropzone.addEventListener('click', (e) => {
+            videoInput.click();
+        });
 
-        // Drag Drop Handling
-        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-blue-500'); });
-        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-blue-500'));
+        videoInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        // Drag Drop Event Pipeline
+        dropzone.addEventListener('dragover', (e) => { 
+            e.preventDefault(); 
+            dropzone.classList.add('border-blue-500', 'bg-slate-800/20'); 
+        });
+        
+        dropzone.addEventListener('dragleave', () => { 
+            dropzone.classList.remove('border-blue-500', 'bg-slate-800/20'); 
+        });
+        
         dropzone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropzone.classList.remove('border-blue-500');
-            if (e.dataTransfer.files.length > 0) handleFileSelection(e.dataTransfer.files[0]);
+            dropzone.classList.remove('border-blue-500', 'bg-slate-800/20');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
         });
 
         function handleFileSelection(file) {
             if (!file || !file.type.startsWith('video/')) {
-                alert('Please upload a valid native video asset file.');
+                alert('Please upload a valid native video file format.');
                 return;
             }
             selectedFile = file;
             
-            // UI State Shift Transitions
+            // UI State Transitions
             dropzone.classList.add('hidden');
             editorView.classList.remove('hidden');
             
-            // Load source track into HTML5 native layout pipeline
+            // Load file stream into player preview
             const blobUrl = URL.createObjectURL(file);
             player.src = blobUrl;
             player.load();
             
-            player.onloadedmetadata = () => {
-                duration = player.duration;
-            };
-
-            // Prime Submission Processing Unit Button
+            // Activate Process Button
             processBtn.disabled = false;
             processBtn.className = "w-full py-4 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold tracking-wide transition-all duration-300 transform active:scale-[0.99] flex items-center justify-center gap-3 shadow-lg shadow-blue-500/20 cursor-pointer";
-            processBtn.innerText = "Export Master Compilation";
+            processBtn.innerText = "Export Master Video";
         }
 
         // Tempo Control Button Selectors Matrix
@@ -234,7 +246,7 @@
                 document.querySelectorAll('.speed-btn').forEach(b => b.className = "speed-btn py-2 text-sm font-medium bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-all");
                 e.target.className = "speed-btn py-2 text-sm font-medium bg-blue-600 text-white rounded-lg border border-blue-500 transition-all shadow-md shadow-blue-600/20";
                 activeSpeed = parseFloat(e.target.getAttribute('data-speed'));
-                player.playbackRate = activeSpeed; // Apply immediately to active live visual layout review tracker
+                player.playbackRate = activeSpeed;
             });
         });
 
@@ -266,7 +278,6 @@
 
         function applyCropBoxRatio() {
             if(!isCropActive) return;
-            // Preset boundaries mapping logic for CSS display tracking mockup layouts
             if(cropRatio === 'none' || cropRatio === '1:1') {
                 cropOverlay.style.width = "60%"; cropOverlay.style.height = "60%";
                 cropOverlay.style.top = "20%"; cropOverlay.style.left = "20%";
@@ -279,11 +290,10 @@
             }
         }
 
-        // Processing & Export pipeline Engine execution logic mapping
+        // Export Processing Pipeline
         processBtn.addEventListener('click', async () => {
             if (!selectedFile) return;
 
-            // Prevent stacking multiple operations gracefully
             processBtn.disabled = true;
             processBtn.innerText = "Processing Pipeline Active...";
             progressContainer.classList.remove('hidden');
@@ -291,27 +301,19 @@
             const inputName = 'input_video.mp4';
             const outputName = 'edited_output.mp4';
 
-            // Write File directly into the virtual virtual context system memory of WebAssembly
+            // Mount file system
             ffmpeg.FS('writeFile', inputName, await fetchFile(selectedFile));
 
-            // Assemble execution commands dynamic complex sequence without losing structural pipeline quality
-            // -crf 18 ensures visually lossless encoding optimization configurations maps output matching inputs
             let args = ['-i', inputName];
-
-            // Speed filter mappings combined via filter graphs blocks
             let videoFilter = "";
             
-            if (activeSpeed === 0.5) {
-                videoFilter += "setpts=2.0*PTS";
-            } else if (activeSpeed === 1.0) {
-                videoFilter += "setpts=1.0*PTS";
-            } else if (activeSpeed === 1.5) {
-                videoFilter += "setpts=0.66*PTS";
-            } else if (activeSpeed === 2.0) {
-                videoFilter += "setpts=0.5*PTS";
-            }
+            // Build tempo adjustments
+            if (activeSpeed === 0.5) videoFilter += "setpts=2.0*PTS";
+            else if (activeSpeed === 1.0) videoFilter += "setpts=1.0*PTS";
+            else if (activeSpeed === 1.5) videoFilter += "setpts=0.66*PTS";
+            else if (activeSpeed === 2.0) videoFilter += "setpts=0.5*PTS";
 
-            // Append Cropping logic dimensions calculation parameters down matching presets to standard native frame logic structures array sets
+            // Add dynamic aspect ratio cropping profiles 
             if(isCropActive && cropRatio !== 'none') {
                 if(cropRatio === '1:1') videoFilter += ",crop=in_h:in_h:in_w/2-out_w/2:0";
                 if(cropRatio === '16:9') videoFilter += ",crop=in_w:in_w*(9/16):0:in_h/2-out_h/2";
@@ -322,29 +324,27 @@
                 args.push('-vf', videoFilter);
             }
 
-            // Audio track processing checks conditions
+            // Audio track stripping or resampling speed adjustments
             if (muteCheckbox.checked) {
-                args.push('-an'); // Drop sound array mappings entirely
+                args.push('-an');
             } else {
-                // Adjust audio tempo dynamically if speed changes to keep track in absolute sync
                 if (activeSpeed === 0.5) args.push('-af', 'atempo=0.5');
                 if (activeSpeed === 1.5) args.push('-af', 'atempo=1.5');
                 if (activeSpeed === 2.0) args.push('-af', 'atempo=2.0');
             }
 
-            // High Quality Compression Parameter Settings
+            // Constant Rate Factor (CRF 18) flags down absolute visually lossless master quality outputs
             args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'ultrafast', outputName);
 
-            // Execute processing script array sequence sets inside background sandbox matrix
+            // Fire WebAssembly transcode engine
             await ffmpeg.run(...args);
 
-            // Read absolute compilation blocks back out from filesystem space tracking blocks
+            // Fetch compiled binary tracking block buffer
             const data = ffmpeg.FS('readFile', outputName);
-
-            // Construct Download Trigger element anchor link
             const blob = new Blob([data.buffer], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
             
+            // Auto download execution
             const downloadAnchor = document.createElement('a');
             downloadAnchor.href = url;
             downloadAnchor.download = `clipcraft_studio_export_${Date.now()}.mp4`;
@@ -352,9 +352,16 @@
             downloadAnchor.click();
             document.body.removeChild(downloadAnchor);
 
-            // Housekeeping system tracking context cleanups references safely parameters memory structures arrays
+            // Memory Unlink Cleanup Task loops
             ffmpeg.FS('unlink', inputName);
             ffmpeg.FS('unlink', outputName);
 
-            // Restoring Operational Buttons back states
-         
+            // UI Reset
+            processBtn.disabled = false;
+            processBtn.innerText = "Export Master Video";
+            progressContainer.classList.add('hidden');
+            progressBar.style.width = `0%`;
+        });
+    </script>
+</body>
+</html>
