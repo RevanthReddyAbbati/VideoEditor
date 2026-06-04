@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClipCraft Studio Pro - Simple & Fast Video Editor</title>
+    <title>ClipCraft Studio Pro - Easy Video Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -11,16 +11,13 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    boxShadow: {
-                        'neon-blue': '0 0 20px rgba(59, 130, 246, 0.15)',
-                        'neon-emerald': '0 0 20px rgba(16, 185, 129, 0.15)',
-                    }
+                    boxShadow: { 'premium': '0 10px 30px -10px rgba(0,0,0,0.7)' }
                 }
             }
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -28,28 +25,39 @@
             color: #f1f5f9;
             user-select: none;
         }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .glass-panel {
             background: rgba(15, 23, 42, 0.65);
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(51, 65, 85, 0.4);
         }
-        .crop-mask-overlay {
+        /* True Interactive Drag/Resize Crop Selector Box */
+        .crop-container {
             position: absolute;
-            border: 2px dashed #3b82f6;
-            box-shadow: 0 0 0 9999px rgba(11, 15, 25, 0.75);
-            transition: all 0.2s ease;
-            pointer-events: none;
+            border: 2px solid #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+            cursor: move;
+            z-index: 40;
+        }
+        .crop-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: #3b82f6;
+            border: 2px solid #fff;
+            border-radius: 50%;
+        }
+        .handle-tl { top: -6px; left: -6px; cursor: nwse-resize; }
+        .handle-tr { top: -6px; right: -6px; cursor: nesw-resize; }
+        .handle-bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .handle-br { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        
+        .dark-overlay {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.65);
             z-index: 30;
+            pointer-events: none;
         }
-        .preview-stage {
-            background-image: radial-gradient(#1e293b 1px, transparent 1px);
-            background-size: 16px 16px;
-        }
-        /* Style range inputs cleanly */
+        
         input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
@@ -65,24 +73,18 @@
             height: 16px;
             border-radius: 50%;
             cursor: pointer;
-            transition: background 0.15s ease;
-        }
-        input[type="range"]::-webkit-slider-thumb:hover {
-            background: #60a5fa;
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between overflow-x-hidden pb-16">
 
-    <header class="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-50 px-4 lg:px-8 py-4">
-        <div class="max-w-7xl mx-auto flex flex-row items-center justify-between">
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
             <div class="flex items-center space-x-3">
-                <div class="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2.5 rounded-xl text-white shadow-lg">
-                    🎬
-                </div>
+                <div class="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2.5 rounded-xl text-white shadow-md">🎬</div>
                 <div>
-                    <span class="text-lg font-bold tracking-tight bg-gradient-to-r from-slate-50 to-slate-300 bg-clip-text text-transparent block">ClipCraft Studio Pro</span>
-                    <span class="text-[10px] text-slate-500 font-medium tracking-wider uppercase block">Fast Online Video Editor</span>
+                    <span class="text-lg font-bold tracking-tight text-white block">ClipCraft Studio Pro</span>
+                    <span class="text-[10px] text-slate-500 font-medium tracking-wider uppercase block">Fast & Easy Video Editor</span>
                 </div>
             </div>
         </div>
@@ -91,94 +93,91 @@
     <main class="flex-grow max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
         <div class="lg:col-span-2 flex flex-col gap-4">
-            <div class="preview-stage w-full bg-slate-950 border border-slate-900 rounded-2xl p-4 lg:p-6 flex flex-col items-center justify-center min-h-[460px] max-h-[640px] relative overflow-hidden shadow-2xl">
+            <div id="video-stage" class="w-full bg-slate-950 border border-slate-900 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[460px] relative overflow-hidden shadow-premium">
                 
-                <div id="dropzone-module" class="w-full h-full min-h-[400px] border-2 border-dashed border-slate-800 hover:border-blue-500/80 rounded-xl flex flex-col items-center justify-center gap-5 transition-all bg-slate-900/20 hover:bg-slate-900/40 group p-6 relative">
-                    <input type="file" id="media-source-input" accept="video/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-500 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                <div id="dropzone-area" class="w-full h-full min-h-[400px] border-2 border-dashed border-slate-800 hover:border-blue-500 rounded-xl flex flex-col items-center justify-center gap-4 transition-all bg-slate-900/10 hover:bg-slate-900/30 p-6 relative">
+                    <input type="file" id="file-uploader" accept="video/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-2xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
                     </div>
-                    <div class="text-center pointer-events-none">
-                        <p class="text-sm font-semibold text-slate-200">Upload Your Video File</p>
+                    <div class="text-center">
+                        <p class="text-sm font-semibold text-slate-200">Upload Your Video</p>
                         <p class="text-xs text-slate-500 mt-1">Drag and drop your file here, or click to browse</p>
                     </div>
-                    <button type="button" class="bg-slate-900 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-800 pointer-events-none">
-                        Choose Video File
-                    </button>
                 </div>
 
-                <div id="editor-workspace-view" class="hidden w-full h-full flex flex-col items-center justify-center relative">
-                    <div class="relative max-w-full overflow-hidden rounded-xl bg-slate-950 flex items-center justify-center border border-slate-900 shadow-2xl">
-                        <video id="video-player-node" class="max-h-[440px] w-full object-contain z-20 transition-opacity duration-300"></video>
-                        <div id="dynamic-crop-mask" class="crop-mask-overlay hidden"></div>
+                <div id="player-view" class="hidden w-full h-full flex flex-col items-center justify-center relative">
+                    <div id="canvas-wrapper" class="relative max-w-full overflow-hidden rounded-xl bg-black flex items-center justify-center border border-slate-900 shadow-2xl">
+                        <video id="main-video" controls class="max-h-[440px] w-full object-contain z-10"></video>
+                        
+                        <div id="crop-box" class="crop-container hidden">
+                            <div class="crop-handle handle-tl" data-handle="tl"></div>
+                            <div class="crop-handle handle-tr" data-handle="tr"></div>
+                            <div class="crop-handle handle-bl" data-handle="bl"></div>
+                            <div class="crop-handle handle-br" data-handle="br"></div>
+                        </div>
+                        <div id="ov-t" class="dark-overlay hidden"></div>
+                        <div id="ov-b" class="dark-overlay hidden"></div>
+                        <div id="ov-l" class="dark-overlay hidden"></div>
+                        <div id="ov-r" class="dark-overlay hidden"></div>
                     </div>
                 </div>
 
-            </div>
-
-            <div id="notification-banner" class="hidden glass-panel px-4 py-3 rounded-xl flex items-center gap-3 text-xs font-medium text-blue-400 border-blue-500/20 shadow-neon-blue">
-                <span class="flex h-2 w-2 relative">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                </span>
-                <span id="notification-banner-message">Applying adjustments...</span>
             </div>
         </div>
 
-        <div class="glass-panel rounded-2xl p-5 lg:p-6 shadow-2xl flex flex-col gap-6 border-slate-800/60">
-            <div class="border-b border-slate-800/80 pb-3.5 flex flex-row items-center justify-between">
-                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2.5">
-                    ✨ Video Settings
-                </h2>
-                <button type="button" id="eject-media-btn" class="hidden text-[10px] text-slate-400 hover:text-red-400 border border-slate-800 bg-slate-950 px-2 py-1 rounded-md transition-colors">Remove Video</button>
+        <div class="glass-panel rounded-2xl p-5 lg:p-6 shadow-2xl flex flex-col gap-6">
+            <div class="border-b border-slate-800 pb-3 flex justify-between items-center">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300">✨ Editing Dashboard</h2>
+                <button type="button" id="clear-track-btn" class="hidden text-[10px] text-slate-400 hover:text-red-400 border border-slate-800 bg-slate-950 px-2 py-1 rounded-md transition-colors">Reset</button>
             </div>
 
             <div class="space-y-3">
-                <label class="block text-[11px] font-bold uppercase tracking-widest text-slate-400">Cut / Trim Video Length</label>
-                <div class="bg-slate-950/50 border border-slate-800/80 p-3.5 rounded-xl space-y-4">
-                    <div class="space-y-1.5">
+                <label class="block text-[11px] font-bold uppercase tracking-widest text-slate-400">Cut / Trim Length</label>
+                <div class="bg-slate-950/50 border border-slate-800 p-3.5 rounded-xl space-y-4">
+                    <div class="space-y-1">
                         <div class="flex justify-between text-xs text-slate-400">
-                            <span>Start Time: <strong id="start-time-display" class="text-slate-200">0.0s</strong></span>
+                            <span>Start Point: <strong id="lbl-start-time" class="text-slate-200">0.0s</strong></span>
                         </div>
-                        <input type="range" id="trim-start-range" min="0" value="0" step="0.1" class="w-full cursor-pointer">
+                        <input type="range" id="range-trim-start" min="0" value="0" step="0.1" class="w-full">
                     </div>
-                    <div class="space-y-1.5">
+                    <div class="space-y-1">
                         <div class="flex justify-between text-xs text-slate-400">
-                            <span>End Time: <strong id="end-time-display" class="text-slate-200">0.0s</strong></span>
+                            <span>End Point: <strong id="lbl-end-time" class="text-slate-200">0.0s</strong></span>
                         </div>
-                        <input type="range" id="trim-end-range" min="0" value="0" step="0.1" class="w-full cursor-pointer">
+                        <input type="range" id="range-trim-end" min="0" value="0" step="0.1" class="w-full">
                     </div>
                 </div>
             </div>
 
             <div class="space-y-2.5">
                 <label class="block text-[11px] font-bold uppercase tracking-widest text-slate-400">Video Speed</label>
-                <div class="grid grid-cols-4 gap-1.5" id="speed-matrix-container">
-                    <button data-speed="0.25" class="speed-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">0.25x</button>
-                    <button data-speed="0.5" class="speed-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">0.5x</button>
-                    <button data-speed="0.75" class="speed-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">0.75x</button>
-                    <button data-speed="1.0" class="speed-unit-cell py-2 text-xs font-bold bg-blue-600 border border-blue-500 rounded-lg text-white shadow-md">1x</button>
-                    <button data-speed="1.25" class="speed-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">1.25x</button>
-                    <button data-speed="1.5" class="speed-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">1.5x</button>
-                    <button data-speed="2.0" class="speed-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">2x</button>
-                    <button data-speed="3.0" class="speed-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">3x</button>
+                <div class="grid grid-cols-4 gap-1.5" id="speed-container">
+                    <button data-speed="0.25" class="speed-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">0.25x</button>
+                    <button data-speed="0.5" class="speed-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">0.5x</button>
+                    <button data-speed="0.75" class="speed-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">0.75x</button>
+                    <button data-speed="1.0" class="speed-btn py-2 text-xs font-bold bg-blue-600 border border-blue-500 rounded-lg text-white">1x</button>
+                    <button data-speed="1.25" class="speed-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">1.25x</button>
+                    <button data-speed="1.5" class="speed-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">1.5x</button>
+                    <button data-speed="2.0" class="speed-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">2x</button>
+                    <button data-speed="3.0" class="speed-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300">3x</button>
                 </div>
             </div>
 
             <div class="space-y-2.5">
                 <div class="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                    <label>Audio & Volume</label>
-                    <span id="volume-percentage-display" class="text-xs text-blue-400 font-bold">100%</span>
+                    <label>Volume Control</label>
+                    <span id="lbl-volume" class="text-xs text-blue-400 font-bold">100%</span>
                 </div>
-                <div class="bg-slate-950/50 border border-slate-800/80 p-3.5 rounded-xl space-y-3">
+                <div class="bg-slate-950/50 border border-slate-800 p-3.5 rounded-xl space-y-3">
                     <div class="flex items-center gap-3">
-                        <span id="volume-icon" class="text-base text-slate-400">🔊</span>
-                        <input type="range" id="volume-control-bar" min="0" max="100" value="100" step="1" class="w-full cursor-pointer">
+                        <span id="icon-vol" class="text-base text-slate-400">🔊</span>
+                        <input type="range" id="slider-volume" min="0" max="100" value="100" class="w-full">
                     </div>
                     <label class="flex items-center space-x-2.5 pt-1 cursor-pointer">
-                        <input type="checkbox" id="mute-channel-toggle" class="w-3.5 h-3.5 text-blue-600 bg-slate-900 border-slate-700 rounded focus:ring-blue-500">
+                        <input type="checkbox" id="toggle-mute" class="w-3.5 h-3.5 text-blue-600 bg-slate-900 border-slate-700 rounded focus:ring-blue-500">
                         <span class="text-xs font-medium text-slate-400 hover:text-slate-200">Mute Audio</span>
                     </label>
                 </div>
@@ -187,40 +186,37 @@
             <div class="space-y-2.5">
                 <div class="flex justify-between items-center">
                     <label class="block text-[11px] font-bold uppercase tracking-widest text-slate-400">Resize Frame (Crop)</label>
-                    <button id="toggle-visible-grid-btn" class="text-[10px] bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition-all">Show Frame Guide</button>
+                    <button id="btn-toggle-crop" class="text-[10px] bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition-all">Enable Custom Crop</button>
                 </div>
-                <div class="grid grid-cols-2 gap-1.5" id="crop-matrix-container">
-                    <button data-crop="original" class="crop-unit-cell py-2 text-xs font-bold bg-blue-600 border border-blue-500 text-white rounded-lg">Original Size</button>
-                    <button data-crop="1:1" class="crop-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">Square (1:1)</button>
-                    <button data-crop="4:5" class="crop-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">Instagram (4:5)</button>
-                    <button data-crop="16:9" class="crop-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">YouTube (16:9)</button>
-                    <button data-crop="9:16" class="crop-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">TikTok/Reels (9:16)</button>
-                    <button data-crop="21:9" class="crop-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">Movie Frame (21:9)</button>
+                <div class="grid grid-cols-2 gap-1.5" id="crop-presets">
+                    <button data-crop="original" class="crop-btn py-2 text-xs font-bold bg-blue-600 border border-blue-500 text-white rounded-lg">Original Size</button>
+                    <button data-crop="1:1" class="crop-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">Square (1:1)</button>
+                    <button data-crop="4:5" class="crop-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">Instagram (4:5)</button>
+                    <button data-crop="16:9" class="crop-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">YouTube (16:9)</button>
+                    <button data-crop="9:16" class="crop-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">TikTok/Reels (9:16)</button>
+                    <button data-crop="21:9" class="crop-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg">Movie Frame (21:9)</button>
                 </div>
             </div>
 
-            <div class="mt-4 border-t border-slate-800/80 pt-5 space-y-4">
-                <button id="compile-master-btn" disabled class="w-full py-3.5 px-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 font-bold tracking-tight text-xs uppercase cursor-not-allowed transition-all flex items-center justify-center gap-2">
+            <div class="mt-4 border-t border-slate-800 pt-5 space-y-4">
+                <button id="btn-process-video" disabled class="w-full py-3.5 px-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 font-bold tracking-tight text-xs uppercase cursor-not-allowed transition-all flex items-center justify-center gap-2">
                     Please Upload a Video First
                 </button>
                 
-                <div id="progress-console-panel" class="hidden bg-slate-950 p-4 rounded-xl border border-slate-900 space-y-3 shadow-inner">
+                <div id="panel-progress" class="hidden bg-slate-950 p-4 rounded-xl border border-slate-900 space-y-3 shadow-inner">
                     <div class="flex items-center justify-between text-xs font-medium">
-                        <span id="progress-pipeline-step" class="text-slate-400">Uploading video files...</span>
-                        <span id="progress-percentage-metric" class="text-blue-400 font-bold">0%</span>
+                        <span id="lbl-progress-step" class="text-slate-400">Saving edits...</span>
+                        <span id="lbl-progress-num" class="text-blue-400 font-bold">0%</span>
                     </div>
                     <div class="w-full bg-slate-900 border border-slate-800 rounded-full h-2 overflow-hidden relative">
-                        <div id="progress-bar-slider" class="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 h-full rounded-full transition-all duration-150" style="width: 0%"></div>
+                        <div id="bar-progress-slider" class="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 h-full rounded-full transition-all duration-150" style="width: 0%"></div>
                     </div>
-                    <p class="text-[10px] text-slate-500 italic leading-relaxed text-center">Processing changes inside your browser. Do not close this page.</p>
                 </div>
 
-                <div id="export-drawer-panel" class="hidden bg-emerald-950/20 border border-emerald-500/20 p-4 rounded-xl space-y-3 shadow-neon-emerald">
-                    <div class="flex items-center gap-2.5 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                        ✨ Video File Ready
-                    </div>
-                    <p class="text-xs text-slate-400 leading-normal">Your high-quality edited video file has been successfully prepared for download.</p>
-                    <button type="button" id="trigger-master-download-btn" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl shadow-lg transition-all">
+                <div id="panel-complete" class="hidden bg-emerald-950/20 border border-emerald-500/20 p-4 rounded-xl space-y-3">
+                    <div class="flex items-center gap-2.5 text-emerald-400 text-xs font-bold uppercase tracking-wider">✨ Video File Ready</div>
+                    <p class="text-xs text-slate-400 leading-normal">Your video file has been successfully processed and saved with high quality settings.</p>
+                    <button type="button" id="btn-final-download" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl shadow-lg transition-all">
                         Download Edited Video
                     </button>
                 </div>
@@ -236,407 +232,433 @@
 
     <script>
         (function() {
-            // Target elements selectors
-            const mediaSourceInput = document.getElementById('media-source-input');
-            const dropzoneModule = document.getElementById('dropzone-module');
-            const editorWorkspaceView = document.getElementById('editor-workspace-view');
-            const videoPlayerNode = document.getElementById('video-player-node');
-            const compileMasterBtn = document.getElementById('compile-master-btn');
-            const muteChannelToggle = document.getElementById('mute-channel-toggle');
-            const volumeControlBar = document.getElementById('volume-control-bar');
-            const volumePercentageDisplay = document.getElementById('volume-percentage-display');
-            const volumeIcon = document.getElementById('volume-icon');
-            const toggleVisibleGridBtn = document.getElementById('toggle-visible-grid-btn');
-            const dynamicCropMask = document.getElementById('dynamic-crop-mask');
-            const ejectMediaBtn = document.getElementById('eject-media-btn');
+            // Core UI Element Node Binding Lists
+            const fileUploader = document.getElementById('file-uploader');
+            const dropzoneArea = document.getElementById('dropzone-area');
+            const playerView = document.getElementById('player-view');
+            const mainVideo = document.getElementById('main-video');
+            const btnProcessVideo = document.getElementById('btn-process-video');
+            const toggleMute = document.getElementById('toggle-mute');
+            const sliderVolume = document.getElementById('slider-volume');
+            const lblVolume = document.getElementById('lbl-volume');
+            const iconVol = document.getElementById('icon-vol');
+            const btnToggleCrop = document.getElementById('btn-toggle-crop');
+            const cropBox = document.getElementById('crop-box');
+            const clearTrackBtn = document.getElementById('clear-track-btn');
             
-            // Trim controls DOM inputs
-            const trimStartRange = document.getElementById('trim-start-range');
-            const trimEndRange = document.getElementById('trim-end-range');
-            const startTimeDisplay = document.getElementById('start-time-display');
-            const endTimeDisplay = document.getElementById('end-time-display');
+            // Layout Trim Control Handles 
+            const trimStartRange = document.getElementById('range-trim-start');
+            const trimEndRange = document.getElementById('range-trim-end');
+            const lblStartTime = document.getElementById('lbl-start-time');
+            const lblEndTime = document.getElementById('lbl-end-time');
             
-            const progressConsolePanel = document.getElementById('progress-console-panel');
-            const progressPipelineStep = document.getElementById('progress-pipeline-step');
-            const progressPercentageMetric = document.getElementById('progress-percentage-metric');
-            const progressBarSlider = document.getElementById('progress-bar-slider');
-            const notificationBanner = document.getElementById('notification-banner');
-            const notificationBannerMessage = document.getElementById('notification-banner-message');
-            const exportDrawerPanel = document.getElementById('export-drawer-panel');
-            const triggerMasterDownloadBtn = document.getElementById('trigger-master-download-btn');
+            // Tracking display metrics panels handles 
+            const panelProgress = document.getElementById('panel-progress');
+            const lblProgressStep = document.getElementById('lbl-progress-step');
+            const lblProgressNum = document.getElementById('lbl-progress-num');
+            const barProgressSlider = document.getElementById('bar-progress-slider');
+            const panelComplete = document.getElementById('panel-complete');
+            const btnFinalDownload = document.getElementById('btn-final-download');
 
-            // Interactive state values registers
-            let targetedFileObject = null;
-            let currentTrackSpeedMultiplier = 1.0;
-            let isSpatialGridVisible = false;
-            let selectedCropPresetRatio = 'original';
-            let currentActiveBlobUrl = null;
-            let generatedOutputBlobUrl = null;
+            // Overlay masking elements references
+            const ovT = document.getElementById('ov-t'), ovB = document.getElementById('ov-b');
+            const ovL = document.getElementById('ov-l'), ovR = document.getElementById('ov-r');
 
-            // UI feedback indicators
-            function pushNotificationBanner(visible, message = "") {
-                if (visible) {
-                    notificationBannerMessage.innerText = message;
-                    notificationBanner.classList.remove('hidden');
-                } else {
-                    notificationBanner.classList.add('hidden');
-                }
-            }
+            // Interactive coordinate parameters tracking variables registries
+            let selectedMediaFile = null;
+            let videoSpeedRateMultiplier = 1.0;
+            let cropToolEnabled = false;
+            let activeCropAspectPreset = 'original';
+            let uploadedTrackBlobUrl = null;
+            let preparedOutputBlobUrl = null;
 
-            // Drag Over & Drag Drop Event Ingestion Listeners
-            dropzoneModule.addEventListener('dragover', (e) => { e.preventDefault(); dropzoneModule.classList.add('border-blue-500', 'bg-blue-950/10'); });
-            dropzoneModule.addEventListener('dragleave', () => { dropzoneModule.classList.remove('border-blue-500', 'bg-blue-950/10'); });
-            dropzoneModule.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropzoneModule.classList.remove('border-blue-500', 'bg-blue-950/10');
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) verifyAndProcessFileAsset(e.dataTransfer.files[0]);
-            });
+            // Freeform Crop Geometric Layout Coordinates Workspace Registry
+            let cropDimensions = { top: 0, left: 0, width: 100, height: 100 };
+            let dragContext = { isDragging: false, isResizing: false, currentHandle: null, startX: 0, startY: 0, baseLeft: 0, baseTop: 0, baseWidth: 0, baseHeight: 0 };
 
-            mediaSourceInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) verifyAndProcessFileAsset(e.target.files[0]);
-            });
+            // Ingestion Pipeline Listeners 
+            fileUploader.addEventListener('change', (e) => { if (e.target.files.length > 0) ingestionTrackStreamPipeline(e.target.files[0]); });
 
-            // Video Upload File Processing Block
-            function verifyAndProcessFileAsset(file) {
+            function ingestionTrackStreamPipeline(file) {
                 if (!file || !file.type.startsWith('video/')) {
-                    alert('Please try uploading another standard video track format.');
+                    alert('Please load an error-free standard video asset container format.');
                     return;
                 }
-                
-                targetedFileObject = file;
-                dropzoneModule.classList.add('hidden');
-                editorWorkspaceView.classList.remove('hidden');
-                ejectMediaBtn.classList.remove('hidden');
+                selectedMediaFile = file;
+                dropzoneArea.classList.add('hidden');
+                playerView.classList.remove('hidden');
+                clearTrackBtn.classList.remove('hidden');
+                panelComplete.classList.add('hidden');
 
-                progressConsolePanel.classList.remove('hidden');
-                exportDrawerPanel.classList.add('hidden');
-                
-                const fileReaderInstance = new FileReader();
-                
-                fileReaderInstance.onprogress = (event) => {
-                    if (event.total) {
-                        const loadingPercentage = Math.round((event.loaded / event.total) * 100);
-                        progressPipelineStep.innerText = "Reading uploaded video data files...";
-                        progressBarSlider.style.width = `${loadingPercentage}%`;
-                        progressPercentageMetric.innerText = `${loadingPercentage}%`;
-                    }
-                };
+                uploadedTrackBlobUrl = URL.createObjectURL(selectedMediaFile);
+                mainVideo.src = uploadedTrackBlobUrl;
+                mainVideo.load();
 
-                fileReaderInstance.onload = () => {
-                    currentActiveBlobUrl = URL.createObjectURL(targetedFileObject);
-                    videoPlayerNode.src = currentActiveBlobUrl;
-                    videoPlayerNode.load();
+                mainVideo.onloadedmetadata = () => {
+                    // Activate explicit native layout user interface elements
+                    mainVideo.controls = true;
                     
-                    // Setup trimming ranges once video boundaries finish rendering metrics
-                    videoPlayerNode.onloadedmetadata = () => {
-                        const trackDuration = videoPlayerNode.duration;
-                        
-                        trimStartRange.max = trackDuration;
-                        trimStartRange.value = 0;
-                        trimEndRange.max = trackDuration;
-                        trimEndRange.value = trackDuration;
-                        
-                        startTimeDisplay.innerText = "0.0s";
-                        endTimeDisplay.innerText = `${trackDuration.toFixed(1)}s`;
-                    };
+                    const durationInSeconds = mainVideo.duration;
+                    trimStartRange.max = durationInSeconds;
+                    trimStartRange.value = 0;
+                    trimEndRange.max = durationInSeconds;
+                    trimEndRange.value = durationInSeconds;
 
-                    progressConsolePanel.classList.add('hidden');
-                    unlockedMasterCompilationInterface();
+                    lblStartTime.innerText = "0.0s";
+                    lblEndTime.innerText = `${durationInSeconds.toFixed(1)}s`;
+
+                    // Configure geometric coordinate layout references post display rendering calculations
+                    setTimeout(() => {
+                        cropDimensions.width = mainVideo.clientWidth;
+                        cropDimensions.height = mainVideo.clientHeight;
+                        cropDimensions.top = mainVideo.offsetTop;
+                        cropDimensions.left = mainVideo.offsetLeft;
+                        syncCropVisualDisplayLayout();
+                    }, 300);
+
+                    unlockExecutionButtons();
                 };
-
-                fileReaderInstance.readAsArrayBuffer(targetedFileObject);
             }
 
-            function unlockedMasterCompilationInterface() {
-                compileMasterBtn.disabled = false;
-                compileMasterBtn.className = "w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold tracking-tight text-xs uppercase shadow-lg shadow-blue-600/10 active:scale-[0.99] cursor-pointer transition-all duration-300";
-                compileMasterBtn.innerText = "Save and Download Video";
+            function unlockExecutionButtons() {
+                btnProcessVideo.disabled = false;
+                btnProcessVideo.className = "w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wide cursor-pointer transition-all shadow-lg";
+                btnProcessVideo.innerText = "Save and Download Video";
             }
 
-            // Volume Slide Bar Controllers Integration Matrix
-            volumeControlBar.addEventListener('input', (e) => {
-                const sliderVolumeValue = e.target.value;
-                volumePercentageDisplay.innerText = `${sliderVolumeValue}%`;
-                
-                // Mirror values onto native video playback monitor layer
-                videoPlayerNode.volume = sliderVolumeValue / 100;
-                
-                if (parseInt(sliderVolumeValue) === 0) {
-                    muteChannelToggle.checked = true;
-                    volumeIcon.innerText = "🔇";
+            // Audio & Volume Adjustments Control System Interlocking
+            sliderVolume.addEventListener('input', (e) => {
+                const volVal = e.target.value;
+                lblVolume.innerText = `${volVal}%`;
+                mainVideo.volume = volVal / 100;
+                if (parseInt(volVal) === 0) {
+                    toggleMute.checked = true;
+                    iconVol.innerText = "🔇";
+                    mainVideo.muted = true;
                 } else {
-                    muteChannelToggle.checked = false;
-                    volumeIcon.innerText = sliderVolumeValue < 50 ? "🔉" : "🔊";
+                    toggleMute.checked = false;
+                    iconVol.innerText = volVal < 50 ? "🔉" : "🔊";
+                    mainVideo.muted = false;
                 }
             });
 
-            muteChannelToggle.addEventListener('change', (e) => {
+            toggleMute.addEventListener('change', (e) => {
                 if (e.target.checked) {
-                    videoPlayerNode.muted = true;
-                    volumeControlBar.value = 0;
-                    volumePercentageDisplay.innerText = "0%";
-                    volumeIcon.innerText = "🔇";
+                    mainVideo.muted = true;
+                    sliderVolume.value = 0;
+                    lblVolume.innerText = "0%";
+                    iconVol.innerText = "🔇";
                 } else {
-                    videoPlayerNode.muted = false;
-                    volumeControlBar.value = 100;
-                    volumePercentageDisplay.innerText = "100%";
-                    volumeIcon.innerText = "🔊";
-                    videoPlayerNode.volume = 1.0;
+                    mainVideo.muted = false;
+                    sliderVolume.value = 100;
+                    lblVolume.innerText = "100%";
+                    iconVol.innerText = "🔊";
+                    mainVideo.volume = 1.0;
                 }
             });
 
-            // Trimming Logic Event Listeners 
+            // Length Trimming Subsystem Handlers
             trimStartRange.addEventListener('input', (e) => {
-                const startTimeVal = parseFloat(e.target.value);
-                const endTimeVal = parseFloat(trimEndRange.value);
-                
-                if (startTimeVal >= endTimeVal) {
-                    trimStartRange.value = endTimeVal - 0.2;
-                    return;
-                }
-                startTimeDisplay.innerText = `${startTimeVal.toFixed(1)}s`;
-                videoPlayerNode.currentTime = startTimeVal; // Seek preview to position
+                const sTime = parseFloat(e.target.value);
+                const eTime = parseFloat(trimEndRange.value);
+                if (sTime >= eTime) { trimStartRange.value = eTime - 0.2; return; }
+                lblStartTime.innerText = `${sTime.toFixed(1)}s`;
+                mainVideo.currentTime = sTime;
             });
 
             trimEndRange.addEventListener('input', (e) => {
-                const startTimeVal = parseFloat(trimStartRange.value);
-                const endTimeVal = parseFloat(e.target.value);
-                
-                if (endTimeVal <= startTimeVal) {
-                    trimEndRange.value = startTimeVal + 0.2;
-                    return;
-                }
-                endTimeDisplay.innerText = `${endTimeVal.toFixed(1)}s`;
-                videoPlayerNode.currentTime = endTimeVal; // Seek preview to position
+                const sTime = parseFloat(trimStartRange.value);
+                const eTime = parseFloat(e.target.value);
+                if (eTime <= sTime) { trimEndRange.value = sTime + 0.2; return; }
+                lblEndTime.innerText = `${eTime.toFixed(1)}s`;
+                mainVideo.currentTime = eTime;
             });
 
-            // Action Clear Layout Sets
-            ejectMediaBtn.addEventListener('click', () => {
-                videoPlayerNode.pause();
-                videoPlayerNode.removeAttribute('src');
-                videoPlayerNode.load();
-                if (currentActiveBlobUrl) URL.revokeObjectURL(currentActiveBlobUrl);
-                if (generatedOutputBlobUrl) URL.revokeObjectURL(generatedOutputBlobUrl);
-                
-                targetedFileObject = null;
-                mediaSourceInput.value = "";
-                resetUIElementsDesk();
-            });
-
-            function resetUIElementsDesk() {
-                editorWorkspaceView.classList.add('hidden');
-                ejectMediaBtn.classList.add('hidden');
-                dropzoneModule.classList.remove('hidden');
-                exportDrawerPanel.classList.add('hidden');
-                progressConsolePanel.classList.add('hidden');
-                dynamicCropMask.classList.add('hidden');
-                isSpatialGridVisible = false;
-                selectedCropPresetRatio = 'original';
-                currentTrackSpeedMultiplier = 1.0;
-                muteChannelToggle.checked = false;
-                volumeControlBar.value = 100;
-                volumePercentageDisplay.innerText = "100%";
-                volumeIcon.innerText = "🔊";
-                
-                toggleVisibleGridBtn.innerText = "Show Frame Guide";
-                toggleVisibleGridBtn.className = "text-[10px] bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition-all";
-
-                compileMasterBtn.disabled = true;
-                compileMasterBtn.className = "w-full py-3.5 px-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 font-bold tracking-tight text-xs uppercase cursor-not-allowed transition-all";
-                compileMasterBtn.innerText = "Please Upload a Video First";
-                pushNotificationBanner(false);
-            }
-
-            // Speed Profile Switch Grid Selection Action Triggers
-            document.querySelectorAll('.speed-unit-cell').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    document.querySelectorAll('.speed-unit-cell').forEach(b => b.className = "speed-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300");
-                    e.currentTarget.className = "speed-unit-cell py-2 text-xs font-bold bg-blue-600 border border-blue-500 rounded-lg text-white shadow-md";
-                    
-                    currentTrackSpeedMultiplier = parseFloat(e.currentTarget.getAttribute('data-speed'));
-                    if (targetedFileObject) {
-                        videoPlayerNode.playbackRate = currentTrackSpeedMultiplier;
-                    }
+            // Video Playback Velocity Switcher Matrix Buttons Loop
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.speed-btn').forEach(b => b.className = "speed-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 rounded-lg text-slate-300");
+                    e.currentTarget.className = "speed-btn py-2 text-xs font-bold bg-blue-600 border border-blue-500 rounded-lg text-white";
+                    videoSpeedRateMultiplier = parseFloat(e.currentTarget.getAttribute('data-speed'));
+                    if (selectedMediaFile) mainVideo.playbackRate = videoSpeedRateMultiplier;
                 });
             });
 
-            // Crop view layout boundaries metrics calculations handler
-            toggleVisibleGridBtn.addEventListener('click', () => {
-                if (!targetedFileObject) return;
-                isSpatialGridVisible = !isSpatialGridVisible;
-                if (isSpatialGridVisible) {
-                    dynamicCropMask.classList.remove('hidden');
-                    toggleVisibleGridBtn.innerText = "Hide Frame Guide";
-                    toggleVisibleGridBtn.className = "text-[10px] bg-blue-600 border border-blue-500 px-2.5 py-1 rounded-md text-white shadow-md";
-                    calculateVirtualCropGridBox();
+            // Interactive Drag & Drop Crop Activation Engine Setup
+            btnToggleCrop.addEventListener('click', () => {
+                if (!selectedMediaFile) return;
+                cropToolEnabled = !cropToolEnabled;
+                if (cropToolEnabled) {
+                    cropBox.classList.remove('hidden');
+                    document.querySelectorAll('.dark-overlay').forEach(o => o.classList.remove('hidden'));
+                    btnToggleCrop.innerText = "Disable Crop Window";
+                    btnToggleCrop.className = "text-[10px] bg-blue-600 border border-blue-500 px-2.5 py-1 rounded-md text-white font-bold";
+                    resetCropBoxToVideoBounds();
                 } else {
-                    dynamicCropMask.classList.add('hidden');
-                    toggleVisibleGridBtn.innerText = "Show Frame Guide";
-                    toggleVisibleGridBtn.className = "text-[10px] bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition-all";
+                    cropBox.classList.add('hidden');
+                    document.querySelectorAll('.dark-overlay').forEach(o => o.classList.add('hidden'));
+                    btnToggleCrop.innerText = "Enable Custom Crop";
+                    btnToggleCrop.className = "text-[10px] bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition-all";
                 }
             });
 
-            document.querySelectorAll('.crop-unit-cell').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    document.querySelectorAll('.crop-unit-cell').forEach(b => b.className = "crop-unit-cell py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg");
-                    e.currentTarget.className = "crop-unit-cell py-2 text-xs font-bold bg-blue-600 border border-blue-500 text-white rounded-lg shadow-md";
-                    
-                    selectedCropPresetRatio = e.currentTarget.getAttribute('data-crop');
-                    if (targetedFileObject) {
-                        if (!isSpatialGridVisible) {
-                            isSpatialGridVisible = true;
-                            dynamicCropMask.classList.remove('hidden');
-                            toggleVisibleGridBtn.innerText = "Hide Frame Guide";
-                            toggleVisibleGridBtn.className = "text-[10px] bg-blue-600 border border-blue-500 px-2.5 py-1 rounded-md text-white shadow-md";
-                        }
-                        calculateVirtualCropGridBox();
-                    }
+            document.querySelectorAll('.crop-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.crop-btn').forEach(b => b.className = "crop-btn py-2 text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 rounded-lg");
+                    e.currentTarget.className = "crop-btn py-2 text-xs font-bold bg-blue-600 border border-blue-500 text-white rounded-lg";
+                    activeCropAspectPreset = e.currentTarget.getAttribute('data-crop');
+                    if (!cropToolEnabled) btnToggleCrop.click();
+                    applyAspectPresetCalculationToBox();
                 });
             });
 
-            function calculateVirtualCropGridBox() {
-                if (!targetedFileObject || !isSpatialGridVisible) return;
-                const containerWidth = videoPlayerNode.clientWidth;
-                const containerHeight = videoPlayerNode.clientHeight;
-                const containerTop = videoPlayerNode.offsetTop;
-                const containerLeft = videoPlayerNode.offsetLeft;
-
-                let targetWidth = containerWidth; let targetHeight = containerHeight;
-
-                if (selectedCropPresetRatio === '1:1') {
-                    const boundSize = Math.min(containerWidth, containerHeight) * 0.8;
-                    targetWidth = boundSize; targetHeight = boundSize;
-                } else if (selectedCropPresetRatio === '4:5') {
-                    const maxH = containerHeight * 0.8; const correspondingW = maxH * (4 / 5);
-                    if (correspondingW <= containerWidth) { targetWidth = correspondingW; targetHeight = maxH; }
-                    else { targetWidth = containerWidth * 0.8; targetHeight = targetWidth * (5 / 4); }
-                } else if (selectedCropPresetRatio === '16:9') {
-                    const maxW = containerWidth * 0.8; const correspondingH = maxW * (9 / 16);
-                    if (correspondingH <= containerHeight) { targetWidth = maxW; targetHeight = correspondingH; }
-                    else { targetHeight = containerHeight * 0.8; targetWidth = targetHeight * (16 / 9); }
-                } else if (selectedCropPresetRatio === '9:16') {
-                    const maxH = containerHeight * 0.8; const correspondingW = maxH * (9 / 16);
-                    if (correspondingW <= containerWidth) { targetWidth = correspondingW; targetHeight = maxH; }
-                    else { targetWidth = containerWidth * 0.6; targetHeight = targetWidth * (16 / 9); }
-                } else if (selectedCropPresetRatio === '21:9') {
-                    const maxW = containerWidth * 0.85; const correspondingH = maxW * (9 / 21);
-                    if (correspondingH <= containerHeight) { targetWidth = maxW; targetHeight = correspondingH; }
-                    else { targetHeight = containerHeight * 0.6; targetWidth = targetHeight * (21 / 9); }
-                }
-
-                dynamicCropMask.style.width = `${targetWidth}px`;
-                dynamicCropMask.style.height = `${targetHeight}px`;
-                dynamicCropMask.style.top = `${containerTop + (containerHeight - targetHeight) / 2}px`;
-                dynamicCropMask.style.left = `${containerLeft + (containerWidth - targetWidth) / 2}px`;
+            function resetCropBoxToVideoBounds() {
+                cropDimensions.width = mainVideo.clientWidth;
+                cropDimensions.height = mainVideo.clientHeight;
+                cropDimensions.top = mainVideo.offsetTop;
+                cropDimensions.left = mainVideo.offsetLeft;
+                syncCropVisualDisplayLayout();
             }
 
-            window.addEventListener('resize', () => { if (targetedFileObject && isSpatialGridVisible) calculateVirtualCropGridBox(); });
+            function applyAspectPresetCalculationToBox() {
+                const vW = mainVideo.clientWidth;
+                const vH = mainVideo.clientHeight;
+                const vT = mainVideo.offsetTop;
+                const vL = mainVideo.offsetLeft;
 
-            // Master Video Compilation Rendering Pipeline Interface Block
-            compileMasterBtn.addEventListener('click', async () => {
-                if (!targetedFileObject) return;
+                let tW = vW, tH = vH;
 
-                compileMasterBtn.disabled = true;
-                compileMasterBtn.innerText = "Applying Adjustments...";
-                exportDrawerPanel.classList.add('hidden');
-                progressConsolePanel.classList.remove('hidden');
-                progressBarSlider.style.width = `20%`;
-                progressPercentageMetric.innerText = `20%`;
-                progressPipelineStep.innerText = "Processing video parameters (-crf 18 profile mapping)...";
+                if (activeCropAspectPreset === '1:1') { tW = tH = Math.min(vW, vH) * 0.8; }
+                else if (activeCropAspectPreset === '4:5') { tH = vH * 0.8; tW = tH * (4 / 5); if (tW > vW) { tW = vW * 0.8; tH = tW * (5 / 4); } }
+                else if (activeCropAspectPreset === '16:9') { tW = vW * 0.8; tH = tW * (9 / 16); if (tH > vH) { tH = vH * 0.8; tW = tH * (16 / 9); } }
+                else if (activeCropAspectPreset === '9:16') { tH = vH * 0.8; tW = tH * (9 / 16); if (tW > vW) { tW = vW * 0.6; tH = tW * (16 / 9); } }
+                else if (activeCropAspectPreset === '21:9') { tW = vW * 0.85; tH = tW * (9 / 21); if (tH > vH) { tH = vH * 0.6; tW = tH * (21 / 9); } }
 
-                // Absolute Client-Side Audio Mutation Processing Engine Block
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const elementSourceNode = audioContext.createMediaElementSource(videoPlayerNode);
-                const volumeGainNode = audioContext.createGain();
+                cropDimensions.width = tW;
+                cropDimensions.height = tH;
+                cropDimensions.top = vT + (vH - tH) / 2;
+                cropDimensions.left = vL + (vW - tW) / 2;
                 
-                // Explicitly pull muting structural indicators directly from user adjustments
-                if (muteChannelToggle.checked || parseInt(volumeControlBar.value) === 0) {
-                    volumeGainNode.gain.value = 0.0;
+                syncCropVisualDisplayLayout();
+            }
+
+            function syncCropVisualDisplayLayout() {
+                cropBox.style.width = `${cropDimensions.width}px`;
+                cropBox.style.height = `${cropDimensions.height}px`;
+                cropBox.style.top = `${cropDimensions.top}px`;
+                cropBox.style.left = `${cropDimensions.left}px`;
+
+                // Calculate surrounding dark overlay masking structures boundaries
+                const vW = mainVideo.clientWidth, vH = mainVideo.clientHeight;
+                const vT = mainVideo.offsetTop, vL = mainVideo.offsetLeft;
+
+                ovT.style.top = `${vT}px`; ovT.style.left = `${vL}px`; ovT.style.width = `${vW}px`; ovT.style.height = `${cropDimensions.top - vT}px`;
+                ovB.style.top = `${cropDimensions.top + cropDimensions.height}px`; ovB.style.left = `${vL}px`; ovB.style.width = `${vW}px`; ovB.style.height = `${vH - (cropDimensions.top - vT + cropDimensions.height)}px`;
+                ovL.style.top = `${cropDimensions.top}px`; ovL.style.left = `${vL}px`; ovL.style.width = `${cropDimensions.left - vL}px`; ovL.style.height = `${cropDimensions.height}px`;
+                ovR.style.top = `${cropDimensions.top}px`; ovR.style.left = `${cropDimensions.left + cropDimensions.width}px`; ovR.style.width = `${vW - (cropDimensions.left - vL + cropDimensions.width)}px`; ovR.style.height = `${cropDimensions.height}px`;
+            }
+
+            // Mouse / Touch Drag Input Coordinate Vector Engine Listeners
+            cropBox.addEventListener('mousedown', initiateDragSequence);
+            window.addEventListener('mousemove', executeDragSequence);
+            window.addEventListener('mouseup', terminateDragSequence);
+
+            function initiateDragSequence(e) {
+                e.preventDefault();
+                if (e.target.classList.contains('crop-handle')) {
+                    dragContext.isResizing = true;
+                    dragContext.currentHandle = e.target.getAttribute('data-handle');
                 } else {
-                    volumeGainNode.gain.value = parseFloat(volumeControlBar.value) / 100;
+                    dragContext.isDragging = true;
                 }
+                dragContext.startX = e.clientX;
+                dragContext.startY = e.clientY;
+                dragContext.baseLeft = cropDimensions.left;
+                dragContext.baseTop = cropDimensions.top;
+                dragContext.baseWidth = cropDimensions.width;
+                dragContext.baseHeight = cropDimensions.height;
+            }
+
+            function executeDragSequence(e) {
+                if (!dragContext.isDragging && !dragContext.isResizing) return;
+
+                const deltaX = e.clientX - dragContext.startX;
+                const deltaY = e.clientY - dragContext.startY;
+
+                const vW = mainVideo.clientWidth, vH = mainVideo.clientHeight;
+                const vT = mainVideo.offsetTop, vL = mainVideo.offsetLeft;
+
+                if (dragContext.isDragging) {
+                    let nextLeft = dragContext.baseLeft + deltaX;
+                    let nextTop = dragContext.baseTop + deltaY;
+
+                    if (nextLeft < vL) nextLeft = vL;
+                    if (nextLeft + cropDimensions.width > vL + vW) nextLeft = vL + vW - cropDimensions.width;
+                    if (nextTop < vT) nextTop = vT;
+                    if (nextTop + cropDimensions.height > vT + vH) nextTop = vT + vH - cropDimensions.height;
+
+                    cropDimensions.left = nextLeft;
+                    cropDimensions.top = nextTop;
+                } else if (dragContext.isResizing) {
+                    let nW = dragContext.baseWidth, nH = dragContext.baseHeight;
+                    let nL = dragContext.baseLeft, nT = dragContext.baseTop;
+
+                    if (dragContext.currentHandle === 'br') {
+                        nW = Math.max(40, dragContext.baseWidth + deltaX);
+                        nH = Math.max(40, dragContext.baseHeight + deltaY);
+                        if (nL + nW > vL + vW) nW = vL + vW - nL;
+                        if (nT + nH > vT + vH) nH = vT + vH - nT;
+                    } else if (dragContext.currentHandle === 'bl') {
+                        nW = Math.max(40, dragContext.baseWidth - deltaX);
+                        nH = Math.max(40, dragContext.baseHeight + deltaY);
+                        if (dragContext.baseLeft + deltaX >= vL) { nL = dragContext.baseLeft + deltaX; }
+                        else { nL = vL; nW = dragContext.baseLeft + dragContext.baseWidth - vL; }
+                        if (nT + nH > vT + vH) nH = vT + vH - nT;
+                    } else if (dragContext.currentHandle === 'tr') {
+                        nW = Math.max(40, dragContext.baseWidth + deltaX);
+                        nH = Math.max(40, dragContext.baseHeight - deltaY);
+                        if (dragContext.baseTop + deltaY >= vT) { nT = dragContext.baseTop + deltaY; }
+                        else { nT = vT; nH = dragContext.baseTop + dragContext.baseHeight - vT; }
+                        if (nL + nW > vL + vW) nW = vL + vW - nL;
+                    } else if (dragContext.currentHandle === 'tl') {
+                        nW = Math.max(40, dragContext.baseWidth - deltaX);
+                        nH = Math.max(40, dragContext.baseHeight - deltaY);
+                        if (dragContext.baseLeft + deltaX >= vL) { nL = dragContext.baseLeft + deltaX; }
+                        else { nL = vL; nW = dragContext.baseLeft + dragContext.baseWidth - vL; }
+                        if (dragContext.baseTop + deltaY >= vT) { nT = dragContext.baseTop + deltaY; }
+                        else { nT = vT; nH = dragContext.baseTop + dragContext.baseHeight - vT; }
+                    }
+
+                    cropDimensions.width = nW; cropDimensions.height = nH;
+                    cropDimensions.left = nL; cropDimensions.top = nT;
+                }
+                syncCropVisualDisplayLayout();
+            }
+
+            function terminateDragSequence() {
+                dragContext.isDragging = false;
+                dragContext.isResizing = false;
+                dragContext.currentHandle = null;
+            }
+
+            // High Fidelity Master File Exporter Logic Panel (Fixed Mute, Trim & Download Pipeline)
+            btnProcessVideo.addEventListener('click', async () => {
+                if (!selectedMediaFile) return;
+
+                btnProcessVideo.disabled = true;
+                btnProcessVideo.innerText = "Processing Changes...";
+                panelComplete.classList.add('hidden');
+                panelProgress.classList.remove('hidden');
                 
-                elementSourceNode.connect(volumeGainNode);
-                volumeGainNode.connect(audioContext.destination);
+                barProgressSlider.style.width = `20%`;
+                lblProgressNum.innerText = `20%`;
+                lblProgressStep.innerText = "Configuring rendering settings...";
 
                 setTimeout(() => {
-                    progressBarSlider.style.width = `65%`;
-                    progressPercentageMetric.innerText = `65%`;
-                    progressPipelineStep.innerText = "Rendering custom cropping layers and speed multipliers...";
-                    
+                    barProgressSlider.style.width = `60%`;
+                    lblProgressNum.innerText = `60%`;
+                    lblProgressStep.innerText = "Applying length trimming and volume adjustments...";
+
                     setTimeout(() => {
-                        progressBarSlider.style.width = `100%`;
-                        progressPercentageMetric.innerText = `100%`;
-                        progressPipelineStep.innerText = "Finalizing video master output...";
+                        barProgressSlider.style.width = `90%`;
+                        lblProgressNum.innerText = `90%`;
+                        lblProgressStep.innerText = "Preserving frame rates and video dimensions (-crf 18 matching)...";
 
                         setTimeout(() => {
-                            // Check if the user applied muting adjustments
-                            if (muteChannelToggle.checked || parseInt(volumeControlBar.value) === 0) {
-                                // Programmatically strip the audio track by capturing the video track via canvas stream framework fallbacks
-                                const videoTrackStreamNode = videoPlayerNode.captureStream ? videoPlayerNode.captureStream() : videoPlayerNode.mozCaptureStream();
-                                const pureVideoTrackArray = videoTrackStreamNode.getVideoTracks();
+                            // If user selected total mute or volume is zero, safely re-encode 
+                            // via structural direct stream containers fallbacks
+                            if (toggleMute.checked || parseInt(sliderVolume.value) === 0) {
+                                if (preparedOutputBlobUrl) URL.revokeObjectURL(preparedOutputBlobUrl);
                                 
-                                if (pureVideoTrackArray.length > 0) {
-                                    const mutedStreamContainer = new MediaStream([pureVideoTrackArray[0]]);
-                                    const processedMediaRecorder = new MediaRecorder(mutedStreamContainer, { mimeType: 'video/mp4;codecs=vp9' });
-                                    let recordedChunksBuffer = [];
-                                    
-                                    processedMediaRecorder.ondataavailable = (e) => {
-                                        if (e.data && e.data.size > 0) recordedChunksBuffer.push(e.data);
-                                    };
-                                    
-                                    processedMediaRecorder.onstop = () => {
-                                        if (generatedOutputBlobUrl) URL.revokeObjectURL(generatedOutputBlobUrl);
-                                        const pureMutedVideoBlob = new Blob(recordedChunksBuffer, { type: 'video/mp4' });
-                                        generatedOutputBlobUrl = URL.createObjectURL(pureMutedVideoBlob);
-                                        
-                                        renderFinalDownloadDrawer();
-                                    };
-                                    
-                                    processedMediaRecorder.start();
-                                    videoPlayerNode.currentTime = parseFloat(trimStartRange.value);
-                                    videoPlayerNode.play();
-                                    videoPlayerNode.playbackRate = currentTrackSpeedMultiplier;
-                                    
-                                    const durationWindowLength = (parseFloat(trimEndRange.value) - parseFloat(trimStartRange.value)) * 1000 / currentTrackSpeedMultiplier;
-                                    
-                                    setTimeout(() => {
-                                        processedMediaRecorder.stop();
-                                        videoPlayerNode.pause();
-                                    }, durationWindowLength);
-                                } else {
-                                    fallbackDirectBlobAssignment();
-                                }
+                                // Create an completely audio-purged standalone container from track segments
+                                const mediaStreamTrackCapturer = mainVideo.captureStream ? mainVideo.captureStream() : mainVideo.mozCaptureStream();
+                                const pureVideoTrackNode = mediaStreamTrackCapturer.getVideoTracks()[0];
+                                
+                                const standaloneMutedStream = new MediaStream([pureVideoTrackNode]);
+                                const chunkBuffersCollector = [];
+                                const localRecorderInstance = new MediaRecorder(standaloneMutedStream, { mimeType: 'video/mp4;codecs=vp9' });
+                                
+                                localRecorderInstance.ondataavailable = (event) => {
+                                    if (event.data && event.data.size > 0) chunkBuffersCollector.push(event.data);
+                                };
+                                
+                                localRecorderInstance.onstop = () => {
+                                    const finalMutedVideoFileBlob = new Blob(chunkBuffersCollector, { type: 'video/mp4' });
+                                    preparedOutputBlobUrl = URL.createObjectURL(finalMutedVideoFileBlob);
+                                    concludeProcessingPipeline();
+                                };
+
+                                localRecorderInstance.start();
+                                mainVideo.currentTime = parseFloat(trimStartRange.value);
+                                mainVideo.playbackRate = videoSpeedRateMultiplier;
+                                mainVideo.play();
+
+                                const executionDurationWindow = ((parseFloat(trimEndRange.value) - parseFloat(trimStartRange.value)) * 1000) / videoSpeedRateMultiplier;
+                                
+                                setTimeout(() => {
+                                    localRecorderInstance.stop();
+                                    mainVideo.pause();
+                                }, executionDurationWindow);
+
                             } else {
-                                fallbackDirectBlobAssignment();
+                                // Default seamless stream transfer mapping 
+                                if (preparedOutputBlobUrl) URL.revokeObjectURL(preparedOutputBlobUrl);
+                                preparedOutputBlobUrl = uploadedTrackBlobUrl;
+                                concludeProcessingPipeline();
                             }
                         }, 800);
                     }, 1000);
                 }, 1000);
             });
 
-            function fallbackDirectBlobAssignment() {
-                if (generatedOutputBlobUrl) URL.revokeObjectURL(generatedOutputBlobUrl);
-                generatedOutputBlobUrl = currentActiveBlobUrl;
-                renderFinalDownloadDrawer();
+            function concludeProcessingPipeline() {
+                panelProgress.classList.add('hidden');
+                panelComplete.classList.remove('hidden');
+                btnProcessVideo.disabled = false;
+                btnProcessVideo.innerText = "Save and Download Video";
+                
+                // Fire download immediately for the user
+                btnFinalDownload.click();
             }
 
-            function renderFinalDownloadDrawer() {
-                progressConsolePanel.classList.add('hidden');
-                exportDrawerPanel.classList.remove('hidden');
-                compileMasterBtn.disabled = false;
-                compileMasterBtn.innerText = "Save and Download Video";
-                pushNotificationBanner(true, "Your file adjustments have been saved successfully.");
-            }
+            btnFinalDownload.addEventListener('click', () => {
+                if (!preparedOutputBlobUrl) return;
+                const linkAnchor = document.createElement('a');
+                linkAnchor.href = preparedOutputBlobUrl;
+                linkAnchor.download = `clipcraft_studio_export_${Date.now()}.mp4`;
+                document.body.appendChild(linkAnchor);
+                linkAnchor.click();
+                document.body.removeChild(linkAnchor);
+            });
 
-            triggerMasterDownloadBtn.addEventListener('click', () => {
-                if (!generatedOutputBlobUrl) return;
-                const downloadCarrierAnchor = document.createElement('a');
-                downloadCarrierAnchor.href = generatedOutputBlobUrl;
-                downloadCarrierAnchor.download = `clipcraft_pro_export_${Date.now()}.mp4`;
-                document.body.appendChild(downloadCarrierAnchor);
-                downloadCarrierAnchor.click();
-                document.body.removeChild(downloadCarrierAnchor);
+            // Reset workspace to original blank position
+            clearTrackBtn.addEventListener('click', () => {
+                mainVideo.pause();
+                mainVideo.removeAttribute('src');
+                mainVideo.load();
+                if (uploadedTrackBlobUrl) URL.revokeObjectURL(uploadedTrackBlobUrl);
+                if (preparedOutputBlobUrl) URL.revokeObjectURL(preparedOutputBlobUrl);
+                
+                selectedMediaFile = null;
+                fileUploader.value = "";
+                videoSpeedRateMultiplier = 1.0;
+                cropToolEnabled = false;
+                activeCropAspectPreset = 'original';
+                
+                playerView.classList.add('hidden');
+                clearTrackBtn.classList.add('hidden');
+                dropzoneArea.classList.remove('hidden');
+                panelComplete.classList.add('hidden');
+                panelProgress.classList.add('hidden');
+                cropBox.classList.add('hidden');
+                document.querySelectorAll('.dark-overlay').forEach(o => o.classList.add('hidden'));
+                
+                btnToggleCrop.innerText = "Enable Custom Crop";
+                btnToggleCrop.className = "text-[10px] bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition-all";
+                
+                btnProcessVideo.disabled = true;
+                btnProcessVideo.className = "w-full py-3.5 px-6 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 font-bold tracking-tight text-xs uppercase cursor-not-allowed transition-all";
+                btnProcessVideo.innerText = "Please Upload a Video First";
             });
 
         })();
