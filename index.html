@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipCraft Studio Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:'Inter',sans-serif;background:#0b0f19;color:#f1f5f9;min-height:100vh;padding-bottom:56px}
+
+/* HEADER */
+.app-header{background:rgba(2,6,23,0.93);border-bottom:1px solid #1e293b;position:sticky;top:0;z-index:100;padding:12px 20px}
+.header-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.logo-icon{background:linear-gradient(135deg,#3b82f6,#6366f1);width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-title{font-size:15px;font-weight:700;color:#fff;line-height:1.2}
+.logo-sub{font-size:9px;color:#64748b;letter-spacing:0.12em;text-transform:uppercase}
+
+/* LAYOUT */
+.app-main{max-width:1280px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+@media(min-width:1024px){.app-main{flex-direction:row;align-items:flex-start}.video-col{flex:2;min-width:0}.controls-col{flex:1;min-width:0}}
+
+/* PANEL */
+.panel{background:rgba(15,23,42,0.85);border:1px solid rgba(51,65,85,0.5);border-radius:16px;padding:16px}
+.controls-col .panel{display:flex;flex-direction:column;gap:18px}
+
+/* DROPZONE */
+.dropzone-wrap{border:2px dashed #334155;border-radius:12px;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px 20px;cursor:pointer;transition:border-color 0.2s,background 0.2s;background:rgba(15,23,42,0.2)}
+.dropzone-wrap:hover,.dropzone-wrap.drag-over{border-color:#3b82f6;background:rgba(59,130,246,0.06)}
+@media(min-width:1024px){.dropzone-wrap{min-height:380px}}
+.upload-icon-box{background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center;transition:border-color 0.2s}
+.dropzone-wrap:hover .upload-icon-box{border-color:#3b82f6}
+.upload-text-main{font-size:14px;font-weight:600;color:#e2e8f0;text-align:center}
+.upload-text-sub{font-size:12px;color:#64748b;text-align:center;margin-top:4px}
+.upload-text-fmt{font-size:11px;color:#475569;text-align:center;margin-top:4px}
+
+/* VIDEO PLAYER */
+#player-view{display:none}
+.video-wrapper{position:relative;width:100%;background:#000;border-radius:12px;overflow:hidden;border:1px solid #1e293b}
+#main-video{display:block;width:100%;max-height:50vh;object-fit:contain}
+@media(min-width:1024px){#main-video{max-height:440px}}
+
+/* VIDEO INFO BAR */
+.info-bar{display:none;background:rgba(2,6,23,0.7);border:1px solid #1e293b;border-radius:8px;padding:8px 12px;margin-top:8px;gap:16px;flex-wrap:wrap}
+.info-item{font-size:10px;color:#64748b;display:flex;align-items:center;gap:4px}
+.info-item strong{color:#94a3b8;font-weight:600}
+
+/* QUICK ACTIONS BAR */
+.quick-bar{display:none;gap:6px;flex-wrap:wrap;margin-top:8px}
+.quick-btn{background:#0f172a;border:1px solid #1e293b;border-radius:8px;color:#94a3b8;font-size:10px;font-weight:600;padding:7px 10px;cursor:pointer;transition:all 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.quick-btn:hover{border-color:#3b82f6;color:#e2e8f0;background:#172033}
+.quick-btn.tog-on{background:#2563eb;border-color:#3b82f6;color:#fff}
+
+/* CROP OVERLAY */
+.crop-box{position:absolute;border:2px solid #3b82f6;background:rgba(59,130,246,0.07);cursor:move;z-index:20;display:none;touch-action:none}
+.ch{position:absolute;width:14px;height:14px;background:#3b82f6;border:2px solid #fff;border-radius:50%;z-index:21}
+.ch-tl{top:-7px;left:-7px;cursor:nwse-resize}.ch-tr{top:-7px;right:-7px;cursor:nesw-resize}
+.ch-bl{bottom:-7px;left:-7px;cursor:nesw-resize}.ch-br{bottom:-7px;right:-7px;cursor:nwse-resize}
+.ov{position:absolute;background:rgba(0,0,0,0.6);z-index:15;pointer-events:none;display:none}
+
+/* SECTION LABELS */
+.section-label{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#94a3b8;margin-bottom:10px;display:block}
+.control-card{background:rgba(2,6,23,0.5);border:1px solid #1e293b;border-radius:12px;padding:14px}
+.row-between{display:flex;justify-content:space-between;align-items:center}
+
+/* RANGE */
+.slider-row{display:flex;flex-direction:column;gap:6px}
+.slider-row+.slider-row{margin-top:14px}
+.slider-label{font-size:11px;color:#94a3b8}
+.slider-label strong{color:#e2e8f0;font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;background:#1e293b;border-radius:999px;outline:none;cursor:pointer;display:block}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;background:#3b82f6;border-radius:50%;border:2px solid #fff;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;border-radius:50%;border:2px solid #fff;cursor:pointer}
+
+/* BUTTON GRIDS */
+.btn-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.btn-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.btn-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.grid-btn{min-height:40px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.grid-btn:hover{border-color:#3b82f6;color:#e2e8f0}
+.grid-btn.active{background:#2563eb;border-color:#3b82f6;color:#fff;font-weight:700}
+
+/* VOLUME */
+.vol-row{display:flex;align-items:center;gap:10px}
+.vol-icon{font-size:18px;flex-shrink:0;min-width:24px;text-align:center}
+.mute-row{display:flex;align-items:center;gap:10px;margin-top:12px;cursor:pointer}
+.mute-row input[type=checkbox]{width:16px;height:16px;accent-color:#3b82f6;cursor:pointer;flex-shrink:0}
+.mute-row span{font-size:12px;color:#94a3b8}
+.vol-badge{font-size:12px;font-weight:700;color:#60a5fa}
+
+/* FILTERS */
+.filter-reset-btn{font-size:10px;background:transparent;border:1px solid #334155;padding:3px 8px;border-radius:5px;color:#64748b;cursor:pointer;transition:all 0.15s}
+.filter-reset-btn:hover{border-color:#f87171;color:#f87171}
+
+/* CROP TOGGLE */
+.crop-toggle-btn{font-size:10px;background:#020617;border:1px solid #1e293b;padding:5px 10px;border-radius:6px;color:#94a3b8;cursor:pointer;transition:all 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.crop-toggle-btn.active{background:#2563eb;border-color:#3b82f6;color:#fff;font-weight:700}
+
+/* FORMAT SELECTOR */
+.format-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fmt-btn{min-height:44px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;touch-action:manipulation;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px}
+.fmt-btn .fmt-ext{font-size:13px;font-weight:700;color:#e2e8f0}
+.fmt-btn .fmt-note{font-size:9px;color:#64748b}
+.fmt-btn:hover{border-color:#3b82f6}
+.fmt-btn.active{background:#2563eb;border-color:#3b82f6}
+.fmt-btn.active .fmt-ext,.fmt-btn.active .fmt-note{color:#fff}
+
+/* QUALITY SELECTOR */
+.qual-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+
+/* EXPORT */
+.export-section{border-top:1px solid #1e293b;padding-top:16px;display:flex;flex-direction:column;gap:12px}
+.btn-export{width:100%;padding:14px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-weight:700;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;border:none;border-radius:12px;cursor:pointer;transition:opacity 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.btn-export:hover{opacity:0.9}
+.btn-export:disabled{background:#1e293b;color:#64748b;cursor:not-allowed;opacity:1}
+.progress-card{display:none;background:#020617;border:1px solid #0f172a;border-radius:12px;padding:14px}
+.progress-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:8px}
+.progress-label{color:#94a3b8}
+.progress-pct{color:#60a5fa;font-weight:700}
+.progress-bar-bg{background:#0f172a;border-radius:999px;height:8px;overflow:hidden}
+.progress-bar-fill{background:linear-gradient(90deg,#3b82f6,#6366f1,#10b981);height:100%;border-radius:999px;width:0%;transition:width 0.2s}
+.progress-hint{font-size:10px;color:#475569;margin-top:8px}
+.done-card{display:none;background:rgba(6,78,59,0.15);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:14px}
+.done-title{color:#34d399;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px}
+.done-desc{font-size:11px;color:#94a3b8;margin-bottom:10px;line-height:1.5}
+.btn-download{width:100%;padding:12px;background:linear-gradient(135deg,#059669,#0d9488);color:#fff;font-weight:700;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;border:none;border-radius:10px;cursor:pointer;transition:opacity 0.2s;touch-action:manipulation}
+.btn-download:hover{opacity:0.9}
+
+/* PANEL HEADER */
+.panel-header{border-bottom:1px solid #1e293b;padding-bottom:12px}
+.panel-title{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8}
+.reset-btn{display:none;font-size:10px;color:#94a3b8;border:1px solid #1e293b;background:#020617;padding:4px 10px;border-radius:6px;cursor:pointer;transition:color 0.15s}
+.reset-btn:hover{color:#f87171;border-color:#f87171}
+
+/* LOOP BADGE */
+.loop-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:5px;padding:3px 7px;margin-left:6px}
+
+/* FOOTER */
+.app-footer{position:fixed;bottom:0;left:0;right:0;background:rgba(2,6,23,0.95);border-top:1px solid #0f172a;padding:10px;text-align:center;z-index:100}
+.footer-text{font-size:10px;color:#64748b;letter-spacing:0.1em;text-transform:uppercase}
+.footer-text span{color:#60a5fa;font-weight:700;text-transform:none;letter-spacing:0}
+
+/* HIDDEN CANVAS */
+#export-canvas{display:none;position:absolute;left:-99999px;top:-99999px}
+#filter-canvas{display:none;position:absolute;left:-99999px;top:-99999px}
+
+/* TOOLTIP CHIP */
+.chip{font-size:9px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.25);color:#93c5fd;border-radius:4px;padding:2px 5px;margin-left:4px;vertical-align:middle}
+
+/* SCROLLABLE controls on mobile */
+@media(max-width:1023px){.controls-col{overflow-y:visible}}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="logo-icon">&#127916;</div>
+    <div>
+      <div class="logo-title">ClipCraft Studio Pro</div>
+      <div class="logo-sub">Fast &amp; Easy Video Editor</div>
+    </div>
+  </div>
+</header>
+
+<main class="app-main">
+
+  <!-- LEFT: Video -->
+  <div class="video-col">
+    <div class="panel" style="background:rgba(2,6,23,0.92)">
+
+      <!-- DROPZONE -->
+      <div class="dropzone-wrap" id="dropzone-wrap" tabindex="0" role="button" aria-label="Upload video">
+        <div class="upload-icon-box">
+          <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#64748b" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+        </div>
+        <div>
+          <p class="upload-text-main">Tap to Upload Video</p>
+          <p class="upload-text-sub">or drag and drop your file here</p>
+          <p class="upload-text-fmt">MP4 &bull; MOV &bull; WebM &bull; AVI &bull; MKV</p>
+        </div>
+      </div>
+
+      <!-- PLAYER -->
+      <div id="player-view">
+        <div class="video-wrapper" id="video-wrapper">
+          <video id="main-video" controls playsinline webkit-playsinline></video>
+          <div class="crop-box" id="crop-box">
+            <div class="ch ch-tl" data-h="tl"></div>
+            <div class="ch ch-tr" data-h="tr"></div>
+            <div class="ch ch-bl" data-h="bl"></div>
+            <div class="ch ch-br" data-h="br"></div>
+          </div>
+          <div class="ov" id="ov-t"></div>
+          <div class="ov" id="ov-b"></div>
+          <div class="ov" id="ov-l"></div>
+          <div class="ov" id="ov-r"></div>
+        </div>
+
+        <!-- Info bar -->
+        <div class="info-bar" id="info-bar">
+          <div class="info-item">&#127909; <strong id="info-res">--</strong></div>
+          <div class="info-item">&#9201; <strong id="info-dur">--</strong></div>
+          <div class="info-item">&#128190; <strong id="info-size">--</strong></div>
+          <div class="info-item">&#127921; <strong id="info-fps">--</strong> fps (est.)</div>
+        </div>
+
+        <!-- Quick action bar -->
+        <div class="quick-bar" id="quick-bar">
+          <button class="quick-btn" id="btn-snapshot" title="Save current frame as PNG">&#128247; Snapshot</button>
+          <button class="quick-btn" id="btn-flip-h">&#8596; Flip H</button>
+          <button class="quick-btn" id="btn-flip-v">&#8597; Flip V</button>
+          <button class="quick-btn" id="btn-rot90">&#8635; Rotate 90</button>
+          <button class="quick-btn" id="btn-loop" title="Loop between trim points">&#9851; Loop Preview</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: Controls -->
+  <div class="controls-col">
+    <div class="panel">
+
+      <div class="row-between panel-header">
+        <span class="panel-title">&#10024; Editing Dashboard</span>
+        <button class="reset-btn" id="reset-btn">Reset</button>
+      </div>
+
+      <!-- TRIM -->
+      <div>
+        <span class="section-label">Cut / Trim Length</span>
+        <div class="control-card">
+          <div class="slider-row">
+            <div class="slider-label">Start: <strong id="lbl-start">0.0s</strong></div>
+            <input type="range" id="trim-start" min="0" max="100" value="0" step="0.1">
+          </div>
+          <div class="slider-row">
+            <div class="slider-label">End: <strong id="lbl-end">0.0s</strong></div>
+            <input type="range" id="trim-end" min="0" max="100" value="100" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <!-- SPEED -->
+      <div>
+        <span class="section-label">Video Speed</span>
+        <div class="btn-grid-4">
+          <button class="grid-btn" data-speed="0.25">0.25x</button>
+          <button class="grid-btn" data-speed="0.5">0.5x</button>
+          <button class="grid-btn" data-speed="0.75">0.75x</button>
+          <button class="grid-btn active" data-speed="1">1x</button>
+          <button class="grid-btn" data-speed="1.25">1.25x</button>
+          <button class="grid-btn" data-speed="1.5">1.5x</button>
+          <button class="grid-btn" data-speed="2">2x</button>
+          <button class="grid-btn" data-speed="3">3x</button>
+        </div>
+      </div>
+
+      <!-- VOLUME -->
+      <div>
+        <div class="row-between" style="margin-bottom:10px">
+          <span class="section-label" style="margin-bottom:0">Volume</span>
+          <span class="vol-badge" id="vol-badge">100%</span>
+        </div>
+        <div class="control-card">
+          <div class="vol-row">
+            <span class="vol-icon" id="vol-icon">&#128266;</span>
+            <input type="range" id="vol-slider" min="0" max="100" value="100">
+          </div>
+          <label class="mute-row">
+            <input type="checkbox" id="mute-chk">
+            <span>Mute Audio</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- FILTERS -->
+      <div>
+        <div class="row-between" style="margin-bottom:10px">
+          <span class="section-label" style="margin-bottom:0">Filters &amp; Adjustments</span>
+          <button class="filter-reset-btn" id="filter-reset">Reset</button>
+        </div>
+        <div class="control-card" style="display:flex;flex-direction:column;gap:12px">
+          <div class="slider-row">
+            <div class="slider-label">Brightness: <strong id="lbl-brightness">100%</strong></div>
+            <input type="range" id="sl-brightness" min="0" max="200" value="100" step="1">
+          </div>
+          <div class="slider-row">
+            <div class="slider-label">Contrast: <strong id="lbl-contrast">100%</strong></div>
+            <input type="range" id="sl-contrast" min="0" max="200" value="100" step="1">
+          </div>
+          <div class="slider-row">
+            <div class="slider-label">Saturation: <strong id="lbl-saturation">100%</strong></div>
+            <input type="range" id="sl-saturation" min="0" max="200" value="100" step="1">
+          </div>
+          <div class="slider-row">
+            <div class="slider-label">Blur: <strong id="lbl-blur">0px</strong></div>
+            <input type="range" id="sl-blur" min="0" max="20" value="0" step="0.5">
+          </div>
+          <div class="slider-row">
+            <div class="slider-label">Opacity: <strong id="lbl-opacity">100%</strong></div>
+            <input type="range" id="sl-opacity" min="10" max="100" value="100" step="1">
+          </div>
+          <!-- Preset filters -->
+          <div>
+            <div class="slider-label" style="margin-bottom:7px">Quick Presets</div>
+            <div class="btn-grid-3" style="gap:5px">
+              <button class="grid-btn" data-preset="none" style="font-size:10px;min-height:34px">Normal</button>
+              <button class="grid-btn" data-preset="vivid" style="font-size:10px;min-height:34px">Vivid</button>
+              <button class="grid-btn" data-preset="matte" style="font-size:10px;min-height:34px">Matte</button>
+              <button class="grid-btn" data-preset="bw" style="font-size:10px;min-height:34px">B&amp;W</button>
+              <button class="grid-btn" data-preset="warm" style="font-size:10px;min-height:34px">Warm</button>
+              <button class="grid-btn" data-preset="cool" style="font-size:10px;min-height:34px">Cool</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CROP -->
+      <div>
+        <div class="row-between" style="margin-bottom:10px">
+          <span class="section-label" style="margin-bottom:0">Crop Frame</span>
+          <button class="crop-toggle-btn" id="crop-toggle">Enable Crop</button>
+        </div>
+        <div class="btn-grid-2">
+          <button class="grid-btn active" data-crop="original">Original</button>
+          <button class="grid-btn" data-crop="1:1">Square 1:1</button>
+          <button class="grid-btn" data-crop="4:5">Instagram 4:5</button>
+          <button class="grid-btn" data-crop="16:9">YouTube 16:9</button>
+          <button class="grid-btn" data-crop="9:16">TikTok 9:16</button>
+          <button class="grid-btn" data-crop="21:9">Cinema 21:9</button>
+        </div>
+      </div>
+
+      <!-- EXPORT FORMAT -->
+      <div>
+        <span class="section-label">Export Format <span class="chip">Browser WebM</span></span>
+        <div class="format-grid">
+          <button class="fmt-btn active" data-fmt="webm">
+            <span class="fmt-ext">.webm</span>
+            <span class="fmt-note">Best quality</span>
+          </button>
+          <button class="fmt-btn" data-fmt="mp4">
+            <span class="fmt-ext">.mp4</span>
+            <span class="fmt-note">Universal</span>
+          </button>
+          <button class="fmt-btn" data-fmt="mkv">
+            <span class="fmt-ext">.mkv</span>
+            <span class="fmt-note">Container</span>
+          </button>
+        </div>
+        <p style="font-size:9px;color:#475569;margin-top:6px;line-height:1.4">Note: browsers encode in WebM. MP4/MKV rename the container file. For true re-encoding, use a desktop tool like HandBrake.</p>
+      </div>
+
+      <!-- EXPORT QUALITY -->
+      <div>
+        <span class="section-label">Export Quality</span>
+        <div class="qual-grid">
+          <button class="grid-btn" data-qual="low" style="min-height:36px;font-size:10px">Low<br><span style="font-size:9px;color:#64748b">2 Mbps</span></button>
+          <button class="grid-btn active" data-qual="med" style="min-height:36px;font-size:10px">Medium<br><span style="font-size:9px;color:#60a5fa">8 Mbps</span></button>
+          <button class="grid-btn" data-qual="high" style="min-height:36px;font-size:10px">High<br><span style="font-size:9px;color:#64748b">16 Mbps</span></button>
+        </div>
+      </div>
+
+      <!-- EXPORT -->
+      <div class="export-section">
+        <button class="btn-export" id="btn-export" disabled>Upload a Video First</button>
+
+        <div class="progress-card" id="progress-card">
+          <div class="progress-row">
+            <span class="progress-label" id="prog-label">Processing...</span>
+            <span class="progress-pct" id="prog-pct">0%</span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-bar"></div></div>
+          <p class="progress-hint">Keep this tab active while processing.</p>
+        </div>
+
+        <div class="done-card" id="done-card">
+          <div class="done-title">&#10024; Video Ready</div>
+          <p class="done-desc" id="done-desc">Your edited video has been processed.</p>
+          <button class="btn-download" id="btn-download">Download Video</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<footer class="app-footer">
+  <p class="footer-text">Developed by <span>Revanth Reddy Abbati</span></p>
+</footer>
+
+<!-- Canvases -->
+<canvas id="export-canvas"></canvas>
+<input type="file" id="file-input" accept="video/*" style="display:none">
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---- DOM ---- */
+  var dropzoneWrap  = document.getElementById('dropzone-wrap');
+  var fileInput     = document.getElementById('file-input');
+  var playerView    = document.getElementById('player-view');
+  var vid           = document.getElementById('main-video');
+  var cropBox       = document.getElementById('crop-box');
+  var ovT           = document.getElementById('ov-t');
+  var ovB           = document.getElementById('ov-b');
+  var ovL           = document.getElementById('ov-l');
+  var ovR           = document.getElementById('ov-r');
+  var trimStartEl   = document.getElementById('trim-start');
+  var trimEndEl     = document.getElementById('trim-end');
+  var lblStart      = document.getElementById('lbl-start');
+  var lblEnd        = document.getElementById('lbl-end');
+  var volSlider     = document.getElementById('vol-slider');
+  var volBadge      = document.getElementById('vol-badge');
+  var volIcon       = document.getElementById('vol-icon');
+  var muteChk       = document.getElementById('mute-chk');
+  var cropToggle    = document.getElementById('crop-toggle');
+  var btnExport     = document.getElementById('btn-export');
+  var progressCard  = document.getElementById('progress-card');
+  var progLabel     = document.getElementById('prog-label');
+  var progPct       = document.getElementById('prog-pct');
+  var progBar       = document.getElementById('prog-bar');
+  var doneCard      = document.getElementById('done-card');
+  var doneDesc      = document.getElementById('done-desc');
+  var btnDownload   = document.getElementById('btn-download');
+  var resetBtn      = document.getElementById('reset-btn');
+  var exportCanvas  = document.getElementById('export-canvas');
+  var infoBar       = document.getElementById('info-bar');
+  var quickBar      = document.getElementById('quick-bar');
+  var btnSnapshot   = document.getElementById('btn-snapshot');
+  var btnFlipH      = document.getElementById('btn-flip-h');
+  var btnFlipV      = document.getElementById('btn-flip-v');
+  var btnRot90      = document.getElementById('btn-rot90');
+  var btnLoop       = document.getElementById('btn-loop');
+  var filterReset   = document.getElementById('filter-reset');
+  var slBrightness  = document.getElementById('sl-brightness');
+  var slContrast    = document.getElementById('sl-contrast');
+  var slSaturation  = document.getElementById('sl-saturation');
+  var slBlur        = document.getElementById('sl-blur');
+  var slOpacity     = document.getElementById('sl-opacity');
+  var lblBrightness = document.getElementById('lbl-brightness');
+  var lblContrast   = document.getElementById('lbl-contrast');
+  var lblSaturation = document.getElementById('lbl-saturation');
+  var lblBlur       = document.getElementById('lbl-blur');
+  var lblOpacity    = document.getElementById('lbl-opacity');
+
+  /* ---- State ---- */
+  var srcBlob   = null;
+  var outBlob   = null;
+  var speed     = 1.0;
+  var cropOn    = false;
+  var loopOn    = false;
+  var flipH     = false;
+  var flipV     = false;
+  var rotation  = 0; /* 0, 90, 180, 270 */
+  var audioCtx  = null;
+  var audioSrc  = null;
+  var loopTimer = null;
+  var exportFmt = 'webm';
+  var exportQual= 8000000; /* bps */
+  var currentFile = null;
+
+  var cd = { top:0, left:0, w:100, h:100 };
+  var dg = { on:false, resize:false, handle:'', sx:0, sy:0, bl:0, bt:0, bw:0, bh:0 };
+
+  /* ---- Filter state ---- */
+  var filters = { brightness:100, contrast:100, saturation:100, blur:0, opacity:100 };
+
+  /* ============================================
+     UPLOAD
+  ============================================ */
+  dropzoneWrap.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    fileInput.value = '';
+    fileInput.click();
+  });
+  dropzoneWrap.addEventListener('keydown', function(e){
+    if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInput.click(); }
+  });
+  dropzoneWrap.addEventListener('dragover', function(e){ e.preventDefault(); dropzoneWrap.classList.add('drag-over'); });
+  dropzoneWrap.addEventListener('dragleave', function(){ dropzoneWrap.classList.remove('drag-over'); });
+  dropzoneWrap.addEventListener('drop', function(e){
+    e.preventDefault(); dropzoneWrap.classList.remove('drag-over');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) loadFile(f);
+  });
+  fileInput.addEventListener('change', function(){
+    if(fileInput.files && fileInput.files.length>0) loadFile(fileInput.files[0]);
+  });
+
+  function loadFile(file){
+    if(!file || !file.type.startsWith('video/')){
+      alert('Please select a valid video file (MP4, MOV, WebM, AVI, MKV).');
+      return;
+    }
+    currentFile = file;
+    if(srcBlob){ URL.revokeObjectURL(srcBlob); srcBlob=null; }
+    srcBlob = URL.createObjectURL(file);
+    vid.pause();
+    vid.src = srcBlob;
+    vid.load();
+    dropzoneWrap.style.display = 'none';
+    playerView.style.display   = 'block';
+    resetBtn.style.display      = 'inline-block';
+    doneCard.style.display      = 'none';
+    progressCard.style.display  = 'none';
+    /* Reset transforms */
+    flipH=false; flipV=false; rotation=0;
+    applyVideoTransform();
+    resetFilters();
+
+    vid.onloadedmetadata = function(){
+      var dur = isFinite(vid.duration) ? vid.duration : 0;
+      trimStartEl.max=dur; trimStartEl.value=0;
+      trimEndEl.max=dur;   trimEndEl.value=dur;
+      lblStart.textContent='0.0s';
+      lblEnd.textContent=dur.toFixed(1)+'s';
+      /* Show info */
+      infoBar.style.display='flex';
+      quickBar.style.display='flex';
+      document.getElementById('info-res').textContent = vid.videoWidth+'x'+vid.videoHeight;
+      document.getElementById('info-dur').textContent = formatTime(dur);
+      document.getElementById('info-size').textContent= formatBytes(file.size);
+      document.getElementById('info-fps').textContent = '~30';
+      setTimeout(function(){ resetCrop(); }, 300);
+      unlockExport();
+    };
+    if(vid.readyState>=1 && isFinite(vid.duration) && vid.duration>0) vid.onloadedmetadata();
+  }
+
+  function formatTime(s){
+    var m=Math.floor(s/60), sec=Math.floor(s%60);
+    return m+':'+(sec<10?'0':'')+sec;
+  }
+  function formatBytes(b){
+    if(b>1048576) return (b/1048576).toFixed(1)+' MB';
+    return (b/1024).toFixed(0)+' KB';
+  }
+  function unlockExport(){
+    btnExport.disabled=false;
+    btnExport.textContent='Save and Download Video';
+  }
+
+  /* ============================================
+     VOLUME
+  ============================================ */
+  volSlider.addEventListener('input', function(){
+    var v=parseInt(volSlider.value,10);
+    volBadge.textContent=v+'%';
+    vid.volume=v/100;
+    if(v===0){ muteChk.checked=true; vid.muted=true; volIcon.innerHTML='&#128263;'; }
+    else { muteChk.checked=false; vid.muted=false; volIcon.innerHTML=v<50?'&#128265;':'&#128266;'; }
+  });
+  muteChk.addEventListener('change', function(){
+    if(muteChk.checked){ vid.muted=true; volSlider.value=0; volBadge.textContent='0%'; volIcon.innerHTML='&#128263;'; }
+    else { vid.muted=false; volSlider.value=100; vid.volume=1; volBadge.textContent='100%'; volIcon.innerHTML='&#128266;'; }
+  });
+
+  /* ============================================
+     TRIM
+  ============================================ */
+  trimStartEl.addEventListener('input', function(){
+    var s=parseFloat(trimStartEl.value), e=parseFloat(trimEndEl.value);
+    if(s>=e-0.1){ s=Math.max(0,e-0.1); trimStartEl.value=s; }
+    lblStart.textContent=s.toFixed(1)+'s';
+    vid.currentTime=s;
+    if(loopOn) restartLoop();
+  });
+  trimEndEl.addEventListener('input', function(){
+    var e=parseFloat(trimEndEl.value), s=parseFloat(trimStartEl.value);
+    if(e<=s+0.1){ e=s+0.1; trimEndEl.value=e; }
+    lblEnd.textContent=e.toFixed(1)+'s';
+    vid.currentTime=e;
+    if(loopOn) restartLoop();
+  });
+
+  /* ============================================
+     SPEED
+  ============================================ */
+  document.querySelectorAll('[data-speed]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('[data-speed]').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      speed=parseFloat(btn.getAttribute('data-speed'));
+      vid.playbackRate=speed;
+    });
+  });
+
+  /* ============================================
+     FILTERS
+  ============================================ */
+  function buildCSSFilter(){
+    return 'brightness('+filters.brightness+'%) contrast('+filters.contrast+'%) saturate('+filters.saturation+'%) blur('+filters.blur+'px) opacity('+filters.opacity+'%)';
+  }
+  function applyFilterToVideo(){
+    vid.style.filter = buildCSSFilter();
+  }
+
+  slBrightness.addEventListener('input', function(){ filters.brightness=parseInt(slBrightness.value,10); lblBrightness.textContent=filters.brightness+'%'; applyFilterToVideo(); });
+  slContrast.addEventListener('input',   function(){ filters.contrast=parseInt(slContrast.value,10);     lblContrast.textContent=filters.contrast+'%';     applyFilterToVideo(); });
+  slSaturation.addEventListener('input', function(){ filters.saturation=parseInt(slSaturation.value,10); lblSaturation.textContent=filters.saturation+'%'; applyFilterToVideo(); });
+  slBlur.addEventListener('input',       function(){ filters.blur=parseFloat(slBlur.value);               lblBlur.textContent=filters.blur+'px';            applyFilterToVideo(); });
+  slOpacity.addEventListener('input',    function(){ filters.opacity=parseInt(slOpacity.value,10);        lblOpacity.textContent=filters.opacity+'%';       applyFilterToVideo(); });
+
+  /* Filter presets */
+  var PRESETS = {
+    none:  { brightness:100, contrast:100, saturation:100, blur:0, opacity:100 },
+    vivid: { brightness:110, contrast:130, saturation:170, blur:0, opacity:100 },
+    matte: { brightness:105, contrast: 85, saturation: 75, blur:0, opacity:100 },
+    bw:    { brightness:100, contrast:110, saturation:  0, blur:0, opacity:100 },
+    warm:  { brightness:108, contrast:105, saturation:115, blur:0, opacity:100 },
+    cool:  { brightness: 98, contrast:105, saturation: 90, blur:0, opacity:100 }
+  };
+  document.querySelectorAll('[data-preset]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('[data-preset]').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      var p=PRESETS[btn.getAttribute('data-preset')];
+      if(!p) return;
+      filters=Object.assign({},p);
+      slBrightness.value=filters.brightness; lblBrightness.textContent=filters.brightness+'%';
+      slContrast.value=filters.contrast;     lblContrast.textContent=filters.contrast+'%';
+      slSaturation.value=filters.saturation; lblSaturation.textContent=filters.saturation+'%';
+      slBlur.value=filters.blur;             lblBlur.textContent=filters.blur+'px';
+      slOpacity.value=filters.opacity;       lblOpacity.textContent=filters.opacity+'%';
+      applyFilterToVideo();
+    });
+  });
+
+  filterReset.addEventListener('click', resetFilters);
+  function resetFilters(){
+    filters={ brightness:100, contrast:100, saturation:100, blur:0, opacity:100 };
+    slBrightness.value=100; lblBrightness.textContent='100%';
+    slContrast.value=100;   lblContrast.textContent='100%';
+    slSaturation.value=100; lblSaturation.textContent='100%';
+    slBlur.value=0;         lblBlur.textContent='0px';
+    slOpacity.value=100;    lblOpacity.textContent='100%';
+    document.querySelectorAll('[data-preset]').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelector('[data-preset="none"]').classList.add('active');
+    applyFilterToVideo();
+  }
+
+  /* ============================================
+     FLIP & ROTATE
+  ============================================ */
+  btnFlipH.addEventListener('click', function(){ flipH=!flipH; btnFlipH.classList.toggle('tog-on',flipH); applyVideoTransform(); });
+  btnFlipV.addEventListener('click', function(){ flipV=!flipV; btnFlipV.classList.toggle('tog-on',flipV); applyVideoTransform(); });
+  btnRot90.addEventListener('click', function(){ rotation=(rotation+90)%360; applyVideoTransform(); });
+
+  function applyVideoTransform(){
+    var scaleX=flipH?-1:1, scaleY=flipV?-1:1;
+    var t='rotate('+rotation+'deg) scale('+scaleX+','+scaleY+')';
+    vid.style.transform=t;
+    /* Update button label */
+    btnRot90.textContent='&#8635; '+rotation+'deg';
+    btnRot90.innerHTML='&#8635; '+rotation+'&deg;';
+  }
+
+  /* ============================================
+     SNAPSHOT
+  ============================================ */
+  btnSnapshot.addEventListener('click', function(){
+    if(!srcBlob) return;
+    var canvas = document.createElement('canvas');
+    canvas.width  = vid.videoWidth  || vid.offsetWidth;
+    canvas.height = vid.videoHeight || vid.offsetHeight;
+    var ctx2 = canvas.getContext('2d');
+    /* Apply filters to snapshot canvas */
+    ctx2.filter = buildCSSFilter();
+    /* Apply transform */
+    ctx2.save();
+    ctx2.translate(canvas.width/2, canvas.height/2);
+    ctx2.rotate(rotation*Math.PI/180);
+    ctx2.scale(flipH?-1:1, flipV?-1:1);
+    ctx2.drawImage(vid, -canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
+    ctx2.restore();
+    canvas.toBlob(function(blob){
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url; a.download='snapshot_'+Date.now()+'.png';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },200);
+    },'image/png');
+  });
+
+  /* ============================================
+     LOOP PREVIEW
+  ============================================ */
+  btnLoop.addEventListener('click', function(){
+    loopOn=!loopOn;
+    btnLoop.classList.toggle('tog-on',loopOn);
+    btnLoop.innerHTML=loopOn?'&#9851; Looping...':'&#9851; Loop Preview';
+    if(loopOn){ restartLoop(); } else { clearLoopTimer(); }
+  });
+  function restartLoop(){
+    clearLoopTimer();
+    var s=parseFloat(trimStartEl.value), e=parseFloat(trimEndEl.value);
+    vid.currentTime=s;
+    vid.playbackRate=speed;
+    vid.play().catch(function(){});
+    /* Poll to detect when we hit the end point */
+    function checkLoop(){
+      if(!loopOn) return;
+      if(vid.currentTime>=e-0.05){
+        vid.currentTime=s;
+        vid.play().catch(function(){});
+      }
+      loopTimer=requestAnimationFrame(checkLoop);
+    }
+    loopTimer=requestAnimationFrame(checkLoop);
+  }
+  function clearLoopTimer(){
+    if(loopTimer){ cancelAnimationFrame(loopTimer); loopTimer=null; }
+  }
+
+  /* ============================================
+     CROP UI
+  ============================================ */
+  cropToggle.addEventListener('click', function(){
+    if(!srcBlob) return;
+    cropOn=!cropOn;
+    if(cropOn){ showCropOverlay(); resetCrop(); cropToggle.textContent='Disable Crop'; cropToggle.classList.add('active'); }
+    else { hideCropOverlay(); cropToggle.textContent='Enable Crop'; cropToggle.classList.remove('active'); setActiveCropBtn('original'); }
+  });
+  document.querySelectorAll('[data-crop]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var p=btn.getAttribute('data-crop');
+      setActiveCropBtn(p);
+      if(p==='original'){ if(cropOn){ cropOn=false; hideCropOverlay(); cropToggle.textContent='Enable Crop'; cropToggle.classList.remove('active'); } }
+      else { if(!cropOn){ cropOn=true; showCropOverlay(); cropToggle.textContent='Disable Crop'; cropToggle.classList.add('active'); } applyPreset(p); }
+    });
+  });
+  function setActiveCropBtn(p){ document.querySelectorAll('[data-crop]').forEach(function(b){ b.classList.remove('active'); }); var a=document.querySelector('[data-crop="'+p+'"]'); if(a) a.classList.add('active'); }
+  function showCropOverlay(){ cropBox.style.display='block'; ovT.style.display=ovB.style.display=ovL.style.display=ovR.style.display='block'; }
+  function hideCropOverlay(){ cropBox.style.display='none';  ovT.style.display=ovB.style.display=ovL.style.display=ovR.style.display='none'; }
+  function resetCrop(){ cd.w=vid.offsetWidth; cd.h=vid.offsetHeight; cd.top=0; cd.left=0; syncCropUI(); }
+  function applyPreset(p){
+    var vW=vid.offsetWidth, vH=vid.offsetHeight, tW=vW, tH=vH;
+    if(p==='1:1')  { tW=tH=Math.min(vW,vH)*0.85; }
+    else if(p==='4:5')  { tH=vH*0.85; tW=tH*(4/5);  if(tW>vW){ tW=vW*0.85; tH=tW*(5/4); } }
+    else if(p==='16:9') { tW=vW*0.85; tH=tW*(9/16); if(tH>vH){ tH=vH*0.85; tW=tH*(16/9); } }
+    else if(p==='9:16') { tH=vH*0.85; tW=tH*(9/16); if(tW>vW){ tW=vW*0.65; tH=tW*(16/9); } }
+    else if(p==='21:9') { tW=vW*0.9;  tH=tW*(9/21); if(tH>vH){ tH=vH*0.6;  tW=tH*(21/9); } }
+    cd.w=tW; cd.h=tH; cd.top=(vH-tH)/2; cd.left=(vW-tW)/2;
+    syncCropUI();
+  }
+  function syncCropUI(){
+    cropBox.style.left=cd.left+'px'; cropBox.style.top=cd.top+'px';
+    cropBox.style.width=cd.w+'px';  cropBox.style.height=cd.h+'px';
+    var vW=vid.offsetWidth, vH=vid.offsetHeight;
+    setOv(ovT,0,0,vW,Math.max(0,cd.top));
+    setOv(ovB,cd.top+cd.h,0,vW,Math.max(0,vH-cd.top-cd.h));
+    setOv(ovL,cd.top,0,Math.max(0,cd.left),cd.h);
+    setOv(ovR,cd.top,cd.left+cd.w,Math.max(0,vW-cd.left-cd.w),cd.h);
+  }
+  function setOv(el,top,left,width,height){ el.style.top=top+'px'; el.style.left=left+'px'; el.style.width=width+'px'; el.style.height=height+'px'; }
+
+  /* Crop drag */
+  function startDrag(cx,cy,tgt){ dg.resize=tgt.classList.contains('ch'); dg.handle=dg.resize?tgt.getAttribute('data-h'):''; dg.on=!dg.resize; dg.sx=cx; dg.sy=cy; dg.bl=cd.left; dg.bt=cd.top; dg.bw=cd.w; dg.bh=cd.h; }
+  function moveDrag(cx,cy){
+    if(!dg.on&&!dg.resize) return;
+    var dx=cx-dg.sx, dy=cy-dg.sy, vW=vid.offsetWidth, vH=vid.offsetHeight, MIN=40;
+    if(dg.on){ cd.left=Math.max(0,Math.min(dg.bl+dx,vW-cd.w)); cd.top=Math.max(0,Math.min(dg.bt+dy,vH-cd.h)); }
+    else {
+      var nW=dg.bw,nH=dg.bh,nL=dg.bl,nT=dg.bt;
+      if(dg.handle==='br'){ nW=Math.max(MIN,dg.bw+dx); nH=Math.max(MIN,dg.bh+dy); if(nL+nW>vW) nW=vW-nL; if(nT+nH>vH) nH=vH-nT; }
+      else if(dg.handle==='bl'){ nW=Math.max(MIN,dg.bw-dx); nH=Math.max(MIN,dg.bh+dy); nL=Math.max(0,dg.bl+dx); if(nT+nH>vH) nH=vH-nT; }
+      else if(dg.handle==='tr'){ nW=Math.max(MIN,dg.bw+dx); nH=Math.max(MIN,dg.bh-dy); nT=Math.max(0,dg.bt+dy); if(nL+nW>vW) nW=vW-nL; }
+      else if(dg.handle==='tl'){ nW=Math.max(MIN,dg.bw-dx); nH=Math.max(MIN,dg.bh-dy); nL=Math.max(0,dg.bl+dx); nT=Math.max(0,dg.bt+dy); }
+      cd.w=nW; cd.h=nH; cd.left=nL; cd.top=nT;
+    }
+    syncCropUI();
+  }
+  function endDrag(){ dg.on=false; dg.resize=false; }
+  cropBox.addEventListener('mousedown', function(e){ e.preventDefault(); startDrag(e.clientX,e.clientY,e.target); });
+  window.addEventListener('mousemove',  function(e){ moveDrag(e.clientX,e.clientY); });
+  window.addEventListener('mouseup',    endDrag);
+  cropBox.addEventListener('touchstart', function(e){ e.preventDefault(); var t=e.touches[0]; startDrag(t.clientX,t.clientY,e.target); },{passive:false});
+  window.addEventListener('touchmove',   function(e){ if(dg.on||dg.resize){ e.preventDefault(); var t=e.touches[0]; moveDrag(t.clientX,t.clientY); } },{passive:false});
+  window.addEventListener('touchend', endDrag);
+
+  /* ============================================
+     FORMAT & QUALITY
+  ============================================ */
+  document.querySelectorAll('[data-fmt]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('[data-fmt]').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      exportFmt=btn.getAttribute('data-fmt');
+    });
+  });
+  var QUAL_MAP={ low:2000000, med:8000000, high:16000000 };
+  document.querySelectorAll('[data-qual]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('[data-qual]').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      exportQual=QUAL_MAP[btn.getAttribute('data-qual')];
+    });
+  });
+
+  /* ============================================
+     EXPORT
+  ============================================ */
+  btnExport.addEventListener('click', function(){
+    if(btnExport.disabled||!srcBlob) return;
+    clearLoopTimer();
+    if(loopOn){ loopOn=false; btnLoop.classList.remove('tog-on'); btnLoop.innerHTML='&#9851; Loop Preview'; }
+    btnExport.disabled=true;
+    btnExport.textContent='Processing...';
+    doneCard.style.display='none';
+    progressCard.style.display='block';
+    setProgress(5,'Setting up...');
+    setTimeout(runExport,80);
+  });
+
+  function runExport(){
+    var startT  = parseFloat(trimStartEl.value);
+    var endT    = parseFloat(trimEndEl.value);
+    var isMuted = muteChk.checked||parseInt(volSlider.value,10)===0;
+    var vol     = parseInt(volSlider.value,10)/100;
+    var spd     = speed;
+
+    /* Canvas crop rect in native video pixels */
+    var cX=0, cY=0;
+    var cW=vid.videoWidth||640;
+    var cH=vid.videoHeight||360;
+    if(cropOn&&vid.videoWidth>0&&vid.offsetWidth>0){
+      var scX=vid.videoWidth/vid.offsetWidth, scY=vid.videoHeight/vid.offsetHeight;
+      cX=Math.round(Math.max(0,cd.left)*scX);
+      cY=Math.round(Math.max(0,cd.top)*scY);
+      cW=Math.round(Math.min(cd.w,vid.offsetWidth-cd.left)*scX);
+      cH=Math.round(Math.min(cd.h,vid.offsetHeight-cd.top)*scY);
+      cW=Math.max(2,cW); cH=Math.max(2,cH);
+    }
+
+    /* Account for rotation on canvas dimensions */
+    var rot90=(rotation===90||rotation===270);
+    var outW=rot90?cH:cW, outH=rot90?cW:cH;
+
+    exportCanvas.width=outW;
+    exportCanvas.height=outH;
+    var ctx=exportCanvas.getContext('2d');
+    var rafId;
+
+    function drawFrame(){
+      ctx.save();
+      ctx.clearRect(0,0,outW,outH);
+      /* Apply CSS-equivalent filter via canvas filter */
+      ctx.filter=buildCSSFilter();
+      /* Apply rotation + flip transforms */
+      ctx.translate(outW/2,outH/2);
+      ctx.rotate(rotation*Math.PI/180);
+      ctx.scale(flipH?-1:1, flipV?-1:1);
+      /* Draw the (possibly cropped) region centered */
+      try{ ctx.drawImage(vid,cX,cY,cW,cH,-cW/2,-cH/2,cW,cH); }catch(e){}
+      ctx.restore();
+      rafId=requestAnimationFrame(drawFrame);
+    }
+
+    var canvasStream=exportCanvas.captureStream(30);
+    var finalStream;
+    if(!isMuted){
+      try{
+        if(!audioCtx||audioCtx.state==='closed'){ audioCtx=new(window.AudioContext||window.webkitAudioContext)(); audioSrc=audioCtx.createMediaElementSource(vid); }
+        if(audioCtx.state==='suspended') audioCtx.resume();
+        var gain=audioCtx.createGain(); gain.gain.value=vol;
+        var dest=audioCtx.createMediaStreamDestination();
+        try{ audioSrc.disconnect(); }catch(e2){}
+        audioSrc.connect(gain); gain.connect(dest); gain.connect(audioCtx.destination);
+        var aTrack=dest.stream.getAudioTracks()[0];
+        finalStream=aTrack?new MediaStream(canvasStream.getVideoTracks().concat([aTrack])):canvasStream;
+      }catch(err){ console.warn('Audio fallback:',err); finalStream=canvasStream; }
+    } else {
+      finalStream=new MediaStream(canvasStream.getVideoTracks());
+    }
+
+    var mimes=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    var mime='video/webm';
+    for(var i=0;i<mimes.length;i++){ if(MediaRecorder.isTypeSupported(mimes[i])){ mime=mimes[i]; break; } }
+
+    var chunks=[];
+    var recorder;
+    try{ recorder=new MediaRecorder(finalStream,{mimeType:mime,videoBitsPerSecond:exportQual}); }
+    catch(e){ try{ recorder=new MediaRecorder(finalStream); }catch(e2){ alert('MediaRecorder not supported. Use Chrome or Firefox.'); resetExportBtn(); return; } }
+
+    recorder.ondataavailable=function(ev){ if(ev.data&&ev.data.size>0) chunks.push(ev.data); };
+    var clipDur=(endT-startT)/spd, progInt;
+
+    recorder.onstart=function(){
+      var t0=Date.now();
+      progInt=setInterval(function(){
+        var el=(Date.now()-t0)/1000;
+        var pct=Math.min(93,Math.round((el/clipDur)*88)+5);
+        setProgress(pct,'Recording: '+el.toFixed(1)+'s / '+clipDur.toFixed(1)+'s');
+      },250);
+    };
+
+    recorder.onstop=function(){
+      cancelAnimationFrame(rafId);
+      clearInterval(progInt);
+      vid.pause();
+      setProgress(100,'Done!');
+      if(outBlob) URL.revokeObjectURL(outBlob);
+      outBlob=URL.createObjectURL(new Blob(chunks,{type:mime}));
+      /* Determine file extension */
+      var ext='.webm';
+      if(exportFmt==='mp4') ext='.mp4';
+      else if(exportFmt==='mkv') ext='.mkv';
+      doneDesc.textContent='Your video is ready. Format: '+exportFmt.toUpperCase()+', Quality: '+Math.round(exportQual/1000000)+' Mbps.';
+      setTimeout(function(){
+        progressCard.style.display='none';
+        doneCard.style.display='block';
+        resetExportBtn();
+        triggerDownload(ext);
+      },400);
+    };
+
+    recorder.onerror=function(err){
+      console.error('Recorder error:',err);
+      cancelAnimationFrame(rafId);
+      clearInterval(progInt);
+      vid.pause();
+      alert('Recording failed. Please try again.');
+      progressCard.style.display='none';
+      resetExportBtn();
+    };
+
+    vid.volume=isMuted?0:vol;
+    vid.muted=isMuted;
+    vid.currentTime=startT;
+
+    var didSeek=false;
+    function afterSeek(){
+      if(didSeek) return;
+      didSeek=true;
+      vid.onseeked=null;
+      vid.playbackRate=spd;
+      drawFrame();
+      recorder.start(100);
+      vid.play().catch(function(e){ console.warn('play() rejected:',e); });
+      function checkEnd(){
+        if(recorder.state!=='recording') return;
+        if(vid.currentTime>=endT-0.04||vid.ended){ recorder.stop(); return; }
+        requestAnimationFrame(checkEnd);
+      }
+      requestAnimationFrame(checkEnd);
+      setTimeout(function(){ if(recorder.state==='recording') recorder.stop(); },(clipDur+4)*1000);
+    }
+    vid.onseeked=afterSeek;
+    setTimeout(afterSeek,1500);
+  }
+
+  function setProgress(pct,label){ progBar.style.width=pct+'%'; progPct.textContent=pct+'%'; progLabel.textContent=label; }
+  function resetExportBtn(){ btnExport.disabled=false; btnExport.textContent='Save and Download Video'; }
+  function triggerDownload(ext){
+    if(!outBlob) return;
+    ext=ext||'.webm';
+    var a=document.createElement('a');
+    a.href=outBlob;
+    a.download='clipcraft_'+Date.now()+ext;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); },100);
+  }
+  btnDownload.addEventListener('click', function(){
+    var ext='.webm';
+    if(exportFmt==='mp4') ext='.mp4';
+    else if(exportFmt==='mkv') ext='.mkv';
+    triggerDownload(ext);
+  });
+
+  /* ============================================
+     RESET
+  ============================================ */
+  resetBtn.addEventListener('click', function(){
+    clearLoopTimer();
+    vid.pause(); vid.removeAttribute('src'); vid.load();
+    if(srcBlob){ URL.revokeObjectURL(srcBlob); srcBlob=null; }
+    if(outBlob){ URL.revokeObjectURL(outBlob); outBlob=null; }
+    if(audioCtx){ try{ audioCtx.close(); }catch(e){} audioCtx=null; audioSrc=null; }
+    fileInput.value='';
+    speed=1.0; cropOn=false; loopOn=false; flipH=false; flipV=false; rotation=0;
+    vid.style.transform=''; vid.style.filter='';
+    btnFlipH.classList.remove('tog-on'); btnFlipV.classList.remove('tog-on');
+    btnRot90.innerHTML='&#8635; Rotate 90';
+    btnLoop.classList.remove('tog-on'); btnLoop.innerHTML='&#9851; Loop Preview';
+
+    dropzoneWrap.style.display='';
+    playerView.style.display='none';
+    resetBtn.style.display='none';
+    infoBar.style.display='none';
+    quickBar.style.display='none';
+    doneCard.style.display='none';
+    progressCard.style.display='none';
+    hideCropOverlay();
+    cropToggle.textContent='Enable Crop'; cropToggle.classList.remove('active');
+    setActiveCropBtn('original');
+
+    document.querySelectorAll('[data-speed]').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelector('[data-speed="1"]').classList.add('active');
+
+    resetFilters();
+
+    document.querySelectorAll('[data-fmt]').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelector('[data-fmt="webm"]').classList.add('active');
+    exportFmt='webm';
+
+    document.querySelectorAll('[data-qual]').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelector('[data-qual="med"]').classList.add('active');
+    exportQual=8000000;
+
+    volSlider.value=100; volBadge.textContent='100%'; volIcon.innerHTML='&#128266;'; muteChk.checked=false;
+    btnExport.disabled=true; btnExport.textContent='Upload a Video First';
+  });
+
+})();
+</script>
+</body>
+</html>
