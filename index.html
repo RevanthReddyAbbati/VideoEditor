@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipCraft Studio Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: #0b0f19;
+  color: #f1f5f9;
+  min-height: 100vh;
+  padding-bottom: 56px;
+}
+
+/* ===== LAYOUT ===== */
+.app-header {
+  background: rgba(2,6,23,0.92);
+  border-bottom: 1px solid #1e293b;
+  position: sticky; top: 0; z-index: 100;
+  padding: 12px 20px;
+}
+.header-inner {
+  max-width: 1280px; margin: 0 auto;
+  display: flex; align-items: center; gap: 12px;
+}
+.logo-icon {
+  background: linear-gradient(135deg,#3b82f6,#6366f1);
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.logo-title { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
+.logo-sub { font-size: 9px; color: #64748b; letter-spacing: 0.12em; text-transform: uppercase; }
+
+.app-main {
+  max-width: 1280px; margin: 0 auto;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+@media (min-width: 1024px) {
+  .app-main { flex-direction: row; align-items: flex-start; }
+  .video-col { flex: 2; }
+  .controls-col { flex: 1; }
+}
+
+/* ===== PANELS ===== */
+.panel {
+  background: rgba(15,23,42,0.8);
+  border: 1px solid rgba(51,65,85,0.5);
+  border-radius: 16px;
+  padding: 16px;
+}
+.controls-col .panel {
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* ===== DROPZONE ===== */
+.dropzone-wrap {
+  border: 2px dashed #334155;
+  border-radius: 12px;
+  min-height: 240px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  padding: 32px 20px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: rgba(15,23,42,0.2);
+}
+.dropzone-wrap:hover, .dropzone-wrap.drag-over {
+  border-color: #3b82f6;
+  background: rgba(59,130,246,0.05);
+}
+@media (min-width: 1024px) { .dropzone-wrap { min-height: 380px; } }
+
+.upload-icon-box {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.dropzone-wrap:hover .upload-icon-box { border-color: #3b82f6; }
+.upload-text-main { font-size: 14px; font-weight: 600; color: #e2e8f0; text-align: center; }
+.upload-text-sub  { font-size: 12px; color: #64748b; text-align: center; margin-top: 4px; }
+.upload-text-fmt  { font-size: 11px; color: #475569; text-align: center; margin-top: 4px; }
+
+/* ===== VIDEO PLAYER ===== */
+#player-view { display: none; }
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #1e293b;
+}
+#main-video {
+  display: block;
+  width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+}
+@media (min-width: 1024px) { #main-video { max-height: 440px; } }
+
+/* ===== CROP OVERLAY ===== */
+.crop-box {
+  position: absolute;
+  border: 2px solid #3b82f6;
+  background: rgba(59,130,246,0.07);
+  cursor: move;
+  z-index: 20;
+  display: none;
+  touch-action: none;
+}
+.ch {
+  position: absolute;
+  width: 14px; height: 14px;
+  background: #3b82f6;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  z-index: 21;
+}
+.ch-tl { top:-7px; left:-7px;  cursor: nwse-resize; }
+.ch-tr { top:-7px; right:-7px; cursor: nesw-resize; }
+.ch-bl { bottom:-7px; left:-7px;  cursor: nesw-resize; }
+.ch-br { bottom:-7px; right:-7px; cursor: nwse-resize; }
+.ov {
+  position: absolute;
+  background: rgba(0,0,0,0.6);
+  z-index: 15;
+  pointer-events: none;
+  display: none;
+}
+
+/* ===== CONTROLS ===== */
+.section-label {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 10px;
+  display: block;
+}
+.control-card {
+  background: rgba(2,6,23,0.5);
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+/* Range sliders */
+.slider-row { display: flex; flex-direction: column; gap: 6px; }
+.slider-row + .slider-row { margin-top: 14px; }
+.slider-label { font-size: 11px; color: #94a3b8; }
+.slider-label strong { color: #e2e8f0; font-weight: 600; }
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  display: block;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px; height: 20px;
+  background: #3b82f6;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+input[type=range]::-moz-range-thumb {
+  width: 20px; height: 20px;
+  background: #3b82f6;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+/* Button grids */
+.btn-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+.btn-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; }
+.grid-btn {
+  min-height: 40px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.grid-btn:hover { border-color: #3b82f6; color: #e2e8f0; }
+.grid-btn.active {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Volume row */
+.vol-row { display: flex; align-items: center; gap: 10px; }
+.vol-icon { font-size: 18px; flex-shrink: 0; min-width: 24px; text-align: center; }
+.mute-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; cursor: pointer; }
+.mute-row input[type=checkbox] { width: 16px; height: 16px; accent-color: #3b82f6; cursor: pointer; flex-shrink: 0; }
+.mute-row span { font-size: 12px; color: #94a3b8; }
+.vol-badge { font-size: 12px; font-weight: 700; color: #60a5fa; }
+
+/* Crop toggle btn */
+.crop-toggle-btn {
+  font-size: 10px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.crop-toggle-btn.active {
+  background: #2563eb; border-color: #3b82f6; color: #fff; font-weight: 700;
+}
+
+/* Export */
+.export-section { border-top: 1px solid #1e293b; padding-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.btn-export {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg,#3b82f6,#6366f1);
+  color: #fff; font-weight: 700; font-size: 12px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border: none; border-radius: 12px;
+  cursor: pointer; transition: opacity 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-export:hover { opacity: 0.9; }
+.btn-export:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; opacity: 1; }
+
+.progress-card {
+  display: none;
+  background: #020617;
+  border: 1px solid #0f172a;
+  border-radius: 12px;
+  padding: 14px;
+}
+.progress-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; }
+.progress-label { color: #94a3b8; }
+.progress-pct { color: #60a5fa; font-weight: 700; }
+.progress-bar-bg { background: #0f172a; border-radius: 999px; height: 8px; overflow: hidden; }
+.progress-bar-fill {
+  background: linear-gradient(90deg,#3b82f6,#6366f1,#10b981);
+  height: 100%; border-radius: 999px;
+  width: 0%; transition: width 0.2s;
+}
+.progress-hint { font-size: 10px; color: #475569; margin-top: 8px; }
+
+.done-card {
+  display: none;
+  background: rgba(6,78,59,0.15);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 12px;
+  padding: 14px;
+}
+.done-title { color: #34d399; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+.done-desc { font-size: 11px; color: #94a3b8; margin-bottom: 10px; line-height: 1.5; }
+.btn-download {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg,#059669,#0d9488);
+  color: #fff; font-weight: 700; font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border: none; border-radius: 10px;
+  cursor: pointer; transition: opacity 0.2s;
+  touch-action: manipulation;
+}
+.btn-download:hover { opacity: 0.9; }
+
+/* Header row helpers */
+.row-between { display: flex; justify-content: space-between; align-items: center; }
+.panel-header { border-bottom: 1px solid #1e293b; padding-bottom: 12px; }
+.panel-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; }
+.reset-btn {
+  display: none;
+  font-size: 10px; color: #94a3b8;
+  border: 1px solid #1e293b;
+  background: #020617;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s;
+  touch-action: manipulation;
+}
+.reset-btn:hover { color: #f87171; border-color: #f87171; }
+
+/* Footer */
+.app-footer {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(2,6,23,0.95);
+  border-top: 1px solid #0f172a;
+  padding: 10px;
+  text-align: center;
+  z-index: 100;
+}
+.footer-text { font-size: 10px; color: #64748b; letter-spacing: 0.1em; text-transform: uppercase; }
+.footer-text span { color: #60a5fa; font-weight: 700; text-transform: none; letter-spacing: 0; }
+
+/* Hidden canvas */
+#export-canvas { display: none; position: absolute; left: -99999px; top: -99999px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-inner">
+    <div class="logo-icon">&#127916;</div>
+    <div>
+      <div class="logo-title">ClipCraft Studio Pro</div>
+      <div class="logo-sub">Fast &amp; Easy Video Editor</div>
+    </div>
+  </div>
+</header>
+
+<main class="app-main">
+
+  <!-- LEFT: Video Stage -->
+  <div class="video-col">
+    <div class="panel" style="background:rgba(2,6,23,0.9);">
+
+      <!-- DROPZONE -->
+      <div class="dropzone-wrap" id="dropzone-wrap">
+        <div class="upload-icon-box">
+          <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#64748b" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+        </div>
+        <div>
+          <p class="upload-text-main">Tap to Upload Video</p>
+          <p class="upload-text-sub">or drag and drop your file here</p>
+          <p class="upload-text-fmt">MP4, MOV, WebM, AVI supported</p>
+        </div>
+      </div>
+
+      <!-- PLAYER -->
+      <div id="player-view">
+        <div class="video-wrapper" id="video-wrapper">
+          <video id="main-video" controls playsinline webkit-playsinline x-webkit-airplay="allow"></video>
+          <div class="crop-box" id="crop-box">
+            <div class="ch ch-tl" data-h="tl"></div>
+            <div class="ch ch-tr" data-h="tr"></div>
+            <div class="ch ch-bl" data-h="bl"></div>
+            <div class="ch ch-br" data-h="br"></div>
+          </div>
+          <div class="ov" id="ov-t"></div>
+          <div class="ov" id="ov-b"></div>
+          <div class="ov" id="ov-l"></div>
+          <div class="ov" id="ov-r"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: Controls -->
+  <div class="controls-col">
+    <div class="panel">
+
+      <div class="row-between panel-header">
+        <span class="panel-title">&#10024; Editing Dashboard</span>
+        <button class="reset-btn" id="reset-btn">Reset</button>
+      </div>
+
+      <!-- TRIM -->
+      <div>
+        <span class="section-label">Cut / Trim Length</span>
+        <div class="control-card">
+          <div class="slider-row">
+            <div class="slider-label">Start: <strong id="lbl-start">0.0s</strong></div>
+            <input type="range" id="trim-start" min="0" max="100" value="0" step="0.1">
+          </div>
+          <div class="slider-row">
+            <div class="slider-label">End: <strong id="lbl-end">0.0s</strong></div>
+            <input type="range" id="trim-end" min="0" max="100" value="100" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <!-- SPEED -->
+      <div>
+        <span class="section-label">Video Speed</span>
+        <div class="btn-grid-4">
+          <button class="grid-btn" data-speed="0.25">0.25x</button>
+          <button class="grid-btn" data-speed="0.5">0.5x</button>
+          <button class="grid-btn" data-speed="0.75">0.75x</button>
+          <button class="grid-btn active" data-speed="1">1x</button>
+          <button class="grid-btn" data-speed="1.25">1.25x</button>
+          <button class="grid-btn" data-speed="1.5">1.5x</button>
+          <button class="grid-btn" data-speed="2">2x</button>
+          <button class="grid-btn" data-speed="3">3x</button>
+        </div>
+      </div>
+
+      <!-- VOLUME -->
+      <div>
+        <div class="row-between" style="margin-bottom:10px">
+          <span class="section-label" style="margin-bottom:0">Volume</span>
+          <span class="vol-badge" id="vol-badge">100%</span>
+        </div>
+        <div class="control-card">
+          <div class="vol-row">
+            <span class="vol-icon" id="vol-icon">&#128266;</span>
+            <input type="range" id="vol-slider" min="0" max="100" value="100">
+          </div>
+          <label class="mute-row">
+            <input type="checkbox" id="mute-chk">
+            <span>Mute Audio</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- CROP -->
+      <div>
+        <div class="row-between" style="margin-bottom:10px">
+          <span class="section-label" style="margin-bottom:0">Crop Frame</span>
+          <button class="crop-toggle-btn" id="crop-toggle">Enable Crop</button>
+        </div>
+        <div class="btn-grid-2">
+          <button class="grid-btn active" data-crop="original">Original</button>
+          <button class="grid-btn" data-crop="1:1">Square 1:1</button>
+          <button class="grid-btn" data-crop="4:5">Instagram 4:5</button>
+          <button class="grid-btn" data-crop="16:9">YouTube 16:9</button>
+          <button class="grid-btn" data-crop="9:16">TikTok 9:16</button>
+          <button class="grid-btn" data-crop="21:9">Cinema 21:9</button>
+        </div>
+      </div>
+
+      <!-- EXPORT -->
+      <div class="export-section">
+        <button class="btn-export" id="btn-export" disabled>Upload a Video First</button>
+
+        <div class="progress-card" id="progress-card">
+          <div class="progress-row">
+            <span class="progress-label" id="prog-label">Processing...</span>
+            <span class="progress-pct" id="prog-pct">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="prog-bar"></div>
+          </div>
+          <p class="progress-hint">Keep this tab active while processing.</p>
+        </div>
+
+        <div class="done-card" id="done-card">
+          <div class="done-title">&#10024; Video Ready</div>
+          <p class="done-desc">Your edited video has been processed successfully.</p>
+          <button class="btn-download" id="btn-download">Download Edited Video (.webm)</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<footer class="app-footer">
+  <p class="footer-text">Developed by <span>Revanth Reddy Abbati</span></p>
+</footer>
+
+<canvas id="export-canvas"></canvas>
+
+<!-- Hidden real file input -- outside the dropzone to avoid stacking/pointer issues -->
+<input type="file" id="file-input" accept="video/*" style="display:none">
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---- DOM refs ---- */
+  var dropzoneWrap = document.getElementById('dropzone-wrap');
+  var fileInput    = document.getElementById('file-input');
+  var playerView   = document.getElementById('player-view');
+  var vid          = document.getElementById('main-video');
+  var cropBox      = document.getElementById('crop-box');
+  var ovT          = document.getElementById('ov-t');
+  var ovB          = document.getElementById('ov-b');
+  var ovL          = document.getElementById('ov-l');
+  var ovR          = document.getElementById('ov-r');
+  var trimStartEl  = document.getElementById('trim-start');
+  var trimEndEl    = document.getElementById('trim-end');
+  var lblStart     = document.getElementById('lbl-start');
+  var lblEnd       = document.getElementById('lbl-end');
+  var volSlider    = document.getElementById('vol-slider');
+  var volBadge     = document.getElementById('vol-badge');
+  var volIcon      = document.getElementById('vol-icon');
+  var muteChk      = document.getElementById('mute-chk');
+  var cropToggle   = document.getElementById('crop-toggle');
+  var btnExport    = document.getElementById('btn-export');
+  var progressCard = document.getElementById('progress-card');
+  var progLabel    = document.getElementById('prog-label');
+  var progPct      = document.getElementById('prog-pct');
+  var progBar      = document.getElementById('prog-bar');
+  var doneCard     = document.getElementById('done-card');
+  var btnDownload  = document.getElementById('btn-download');
+  var resetBtn     = document.getElementById('reset-btn');
+  var exportCanvas = document.getElementById('export-canvas');
+
+  /* ---- State ---- */
+  var srcBlob   = null;
+  var outBlob   = null;
+  var speed     = 1.0;
+  var cropOn    = false;
+  var audioCtx  = null;
+  var audioSrc  = null;
+
+  /* Crop dimensions in px relative to video element */
+  var cd = { top: 0, left: 0, w: 100, h: 100 };
+  var dg = { on: false, resize: false, handle: '', sx: 0, sy: 0, bl: 0, bt: 0, bw: 0, bh: 0 };
+
+  /* =============================================
+     UPLOAD -- dropzone click opens hidden input
+  ============================================= */
+  dropzoneWrap.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInput.value = '';      /* reset so same file can be re-picked */
+    fileInput.click();
+  });
+
+  /* Also support keyboard activation */
+  dropzoneWrap.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+  dropzoneWrap.setAttribute('tabindex', '0');
+  dropzoneWrap.setAttribute('role', 'button');
+  dropzoneWrap.setAttribute('aria-label', 'Upload video');
+
+  /* Drag-and-drop */
+  dropzoneWrap.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropzoneWrap.classList.add('drag-over');
+  });
+  dropzoneWrap.addEventListener('dragleave', function () {
+    dropzoneWrap.classList.remove('drag-over');
+  });
+  dropzoneWrap.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropzoneWrap.classList.remove('drag-over');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length > 0) loadFile(files[0]);
+  });
+
+  /* File input change */
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files.length > 0) {
+      loadFile(fileInput.files[0]);
+    }
+  });
+
+  /* =============================================
+     LOAD FILE
+  ============================================= */
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('video/')) {
+      alert('Please select a valid video file (MP4, MOV, WebM, AVI).');
+      return;
+    }
+
+    /* Revoke old blob */
+    if (srcBlob) { URL.revokeObjectURL(srcBlob); srcBlob = null; }
+    srcBlob = URL.createObjectURL(file);
+
+    /* Set video source */
+    vid.pause();
+    vid.src = srcBlob;
+    vid.load();
+
+    /* Show player, hide dropzone */
+    dropzoneWrap.style.display = 'none';
+    playerView.style.display   = 'block';
+    resetBtn.style.display      = 'inline-block';
+    doneCard.style.display      = 'none';
+    progressCard.style.display  = 'none';
+
+    vid.onloadedmetadata = function () {
+      var dur = isFinite(vid.duration) ? vid.duration : 0;
+      trimStartEl.max   = dur; trimStartEl.value = 0;
+      trimEndEl.max     = dur; trimEndEl.value   = dur;
+      lblStart.textContent = '0.0s';
+      lblEnd.textContent   = dur.toFixed(1) + 's';
+      setTimeout(function () { resetCrop(); }, 300);
+      unlockExport();
+    };
+
+    /* Fallback if metadata already loaded */
+    if (vid.readyState >= 1 && isFinite(vid.duration) && vid.duration > 0) {
+      vid.onloadedmetadata();
+    }
+  }
+
+  function unlockExport() {
+    btnExport.disabled = false;
+    btnExport.textContent = 'Save and Download Video';
+  }
+
+  /* =============================================
+     VOLUME
+  ============================================= */
+  volSlider.addEventListener('input', function () {
+    var v = parseInt(volSlider.value, 10);
+    volBadge.textContent = v + '%';
+    vid.volume = v / 100;
+    if (v === 0) {
+      muteChk.checked = true; vid.muted = true;
+      volIcon.innerHTML = '&#128263;';
+    } else {
+      muteChk.checked = false; vid.muted = false;
+      volIcon.innerHTML = v < 50 ? '&#128265;' : '&#128266;';
+    }
+  });
+
+  muteChk.addEventListener('change', function () {
+    if (muteChk.checked) {
+      vid.muted = true; volSlider.value = 0;
+      volBadge.textContent = '0%';
+      volIcon.innerHTML = '&#128263;';
+    } else {
+      vid.muted = false; volSlider.value = 100;
+      vid.volume = 1;
+      volBadge.textContent = '100%';
+      volIcon.innerHTML = '&#128266;';
+    }
+  });
+
+  /* =============================================
+     TRIM
+  ============================================= */
+  trimStartEl.addEventListener('input', function () {
+    var s = parseFloat(trimStartEl.value);
+    var e = parseFloat(trimEndEl.value);
+    if (s >= e - 0.1) { s = Math.max(0, e - 0.1); trimStartEl.value = s; }
+    lblStart.textContent = s.toFixed(1) + 's';
+    vid.currentTime = s;
+  });
+
+  trimEndEl.addEventListener('input', function () {
+    var e = parseFloat(trimEndEl.value);
+    var s = parseFloat(trimStartEl.value);
+    if (e <= s + 0.1) { e = s + 0.1; trimEndEl.value = e; }
+    lblEnd.textContent = e.toFixed(1) + 's';
+    vid.currentTime = e;
+  });
+
+  /* =============================================
+     SPEED
+  ============================================= */
+  document.querySelectorAll('[data-speed]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('[data-speed]').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      speed = parseFloat(btn.getAttribute('data-speed'));
+      vid.playbackRate = speed;
+    });
+  });
+
+  /* =============================================
+     CROP UI
+  ============================================= */
+  cropToggle.addEventListener('click', function () {
+    if (!srcBlob) return;
+    cropOn = !cropOn;
+    if (cropOn) {
+      showCropOverlay();
+      resetCrop();
+      cropToggle.textContent = 'Disable Crop';
+      cropToggle.classList.add('active');
+    } else {
+      hideCropOverlay();
+      cropToggle.textContent = 'Enable Crop';
+      cropToggle.classList.remove('active');
+      setActiveCropBtn('original');
+    }
+  });
+
+  document.querySelectorAll('[data-crop]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var preset = btn.getAttribute('data-crop');
+      setActiveCropBtn(preset);
+      if (preset === 'original') {
+        if (cropOn) { cropOn = false; hideCropOverlay(); cropToggle.textContent = 'Enable Crop'; cropToggle.classList.remove('active'); }
+      } else {
+        if (!cropOn) { cropOn = true; showCropOverlay(); cropToggle.textContent = 'Disable Crop'; cropToggle.classList.add('active'); }
+        applyPreset(preset);
+      }
+    });
+  });
+
+  function setActiveCropBtn(p) {
+    document.querySelectorAll('[data-crop]').forEach(function (b) { b.classList.remove('active'); });
+    var a = document.querySelector('[data-crop="' + p + '"]');
+    if (a) a.classList.add('active');
+  }
+
+  function showCropOverlay() { cropBox.style.display = 'block'; ovT.style.display = ovB.style.display = ovL.style.display = ovR.style.display = 'block'; }
+  function hideCropOverlay() { cropBox.style.display = 'none';  ovT.style.display = ovB.style.display = ovL.style.display = ovR.style.display = 'none'; }
+
+  function resetCrop() {
+    cd.w    = vid.offsetWidth;
+    cd.h    = vid.offsetHeight;
+    cd.top  = 0;
+    cd.left = 0;
+    syncCropUI();
+  }
+
+  function applyPreset(p) {
+    var vW = vid.offsetWidth, vH = vid.offsetHeight;
+    var tW = vW, tH = vH;
+    if (p === '1:1')  { tW = tH = Math.min(vW, vH) * 0.85; }
+    else if (p === '4:5')  { tH = vH * 0.85; tW = tH * (4 / 5); if (tW > vW) { tW = vW * 0.85; tH = tW * (5 / 4); } }
+    else if (p === '16:9') { tW = vW * 0.85; tH = tW * (9 / 16); if (tH > vH) { tH = vH * 0.85; tW = tH * (16 / 9); } }
+    else if (p === '9:16') { tH = vH * 0.85; tW = tH * (9 / 16); if (tW > vW) { tW = vW * 0.65; tH = tW * (16 / 9); } }
+    else if (p === '21:9') { tW = vW * 0.9;  tH = tW * (9 / 21); if (tH > vH) { tH = vH * 0.6;  tW = tH * (21 / 9); } }
+    cd.w    = tW;
+    cd.h    = tH;
+    cd.top  = (vH - tH) / 2;
+    cd.left = (vW - tW) / 2;
+    syncCropUI();
+  }
+
+  function syncCropUI() {
+    cropBox.style.left   = cd.left + 'px';
+    cropBox.style.top    = cd.top  + 'px';
+    cropBox.style.width  = cd.w    + 'px';
+    cropBox.style.height = cd.h    + 'px';
+
+    var vW = vid.offsetWidth, vH = vid.offsetHeight;
+
+    /* top overlay */
+    ovT.style.left = '0'; ovT.style.top = '0';
+    ovT.style.width = vW + 'px'; ovT.style.height = Math.max(0, cd.top) + 'px';
+    /* bottom overlay */
+    ovB.style.left = '0'; ovB.style.top  = (cd.top + cd.h) + 'px';
+    ovB.style.width = vW + 'px'; ovB.style.height = Math.max(0, vH - cd.top - cd.h) + 'px';
+    /* left overlay */
+    ovL.style.left = '0'; ovL.style.top  = cd.top + 'px';
+    ovL.style.width = Math.max(0, cd.left) + 'px'; ovL.style.height = cd.h + 'px';
+    /* right overlay */
+    ovR.style.left = (cd.left + cd.w) + 'px'; ovR.style.top = cd.top + 'px';
+    ovR.style.width = Math.max(0, vW - cd.left - cd.w) + 'px'; ovR.style.height = cd.h + 'px';
+  }
+
+  /* Crop drag & resize */
+  function startDrag(clientX, clientY, target) {
+    dg.resize = target.classList.contains('ch');
+    dg.handle = dg.resize ? target.getAttribute('data-h') : '';
+    dg.on     = !dg.resize;
+    dg.sx = clientX; dg.sy = clientY;
+    dg.bl = cd.left; dg.bt = cd.top;
+    dg.bw = cd.w;    dg.bh = cd.h;
+  }
+  function moveDrag(clientX, clientY) {
+    if (!dg.on && !dg.resize) return;
+    var dx = clientX - dg.sx, dy = clientY - dg.sy;
+    var vW = vid.offsetWidth, vH = vid.offsetHeight;
+    var MIN = 40;
+    if (dg.on) {
+      cd.left = Math.max(0, Math.min(dg.bl + dx, vW - cd.w));
+      cd.top  = Math.max(0, Math.min(dg.bt + dy, vH - cd.h));
+    } else {
+      var nW = dg.bw, nH = dg.bh, nL = dg.bl, nT = dg.bt;
+      if (dg.handle === 'br') { nW = Math.max(MIN, dg.bw + dx); nH = Math.max(MIN, dg.bh + dy); if (nL + nW > vW) nW = vW - nL; if (nT + nH > vH) nH = vH - nT; }
+      else if (dg.handle === 'bl') { nW = Math.max(MIN, dg.bw - dx); nH = Math.max(MIN, dg.bh + dy); nL = Math.max(0, dg.bl + dx); if (nT + nH > vH) nH = vH - nT; }
+      else if (dg.handle === 'tr') { nW = Math.max(MIN, dg.bw + dx); nH = Math.max(MIN, dg.bh - dy); nT = Math.max(0, dg.bt + dy); if (nL + nW > vW) nW = vW - nL; }
+      else if (dg.handle === 'tl') { nW = Math.max(MIN, dg.bw - dx); nH = Math.max(MIN, dg.bh - dy); nL = Math.max(0, dg.bl + dx); nT = Math.max(0, dg.bt + dy); }
+      cd.w = nW; cd.h = nH; cd.left = nL; cd.top = nT;
+    }
+    syncCropUI();
+  }
+  function endDrag() { dg.on = false; dg.resize = false; }
+
+  cropBox.addEventListener('mousedown', function (e) { e.preventDefault(); startDrag(e.clientX, e.clientY, e.target); });
+  window.addEventListener('mousemove',  function (e) { moveDrag(e.clientX, e.clientY); });
+  window.addEventListener('mouseup',    endDrag);
+  cropBox.addEventListener('touchstart', function (e) { e.preventDefault(); var t = e.touches[0]; startDrag(t.clientX, t.clientY, e.target); }, { passive: false });
+  window.addEventListener('touchmove',   function (e) { if (dg.on || dg.resize) { e.preventDefault(); var t = e.touches[0]; moveDrag(t.clientX, t.clientY); } }, { passive: false });
+  window.addEventListener('touchend',    endDrag);
+
+  /* =============================================
+     EXPORT
+  ============================================= */
+  btnExport.addEventListener('click', function () {
+    if (btnExport.disabled || !srcBlob) return;
+    btnExport.disabled = true;
+    btnExport.textContent = 'Processing...';
+    doneCard.style.display    = 'none';
+    progressCard.style.display = 'block';
+    setProgress(5, 'Setting up...');
+    /* Defer to let UI paint first */
+    setTimeout(runExport, 80);
+  });
+
+  function runExport() {
+    var startT  = parseFloat(trimStartEl.value);
+    var endT    = parseFloat(trimEndEl.value);
+    var isMuted = muteChk.checked || parseInt(volSlider.value, 10) === 0;
+    var vol     = parseInt(volSlider.value, 10) / 100;
+    var spd     = speed;
+
+    /* Compute crop rect in native video pixels */
+    var cX = 0, cY = 0;
+    var cW = vid.videoWidth  || 640;
+    var cH = vid.videoHeight || 360;
+
+    if (cropOn && vid.videoWidth > 0 && vid.offsetWidth > 0) {
+      var scX = vid.videoWidth  / vid.offsetWidth;
+      var scY = vid.videoHeight / vid.offsetHeight;
+      cX = Math.round(Math.max(0, cd.left) * scX);
+      cY = Math.round(Math.max(0, cd.top)  * scY);
+      cW = Math.round(Math.min(cd.w, vid.offsetWidth  - cd.left) * scX);
+      cH = Math.round(Math.min(cd.h, vid.offsetHeight - cd.top)  * scY);
+      cW = Math.max(2, cW); cH = Math.max(2, cH);
+    }
+
+    exportCanvas.width  = cW;
+    exportCanvas.height = cH;
+    var ctx = exportCanvas.getContext('2d');
+    var rafId;
+
+    function drawFrame() {
+      try { ctx.drawImage(vid, cX, cY, cW, cH, 0, 0, cW, cH); } catch (ignore) {}
+      rafId = requestAnimationFrame(drawFrame);
+    }
+
+    var canvasStream = exportCanvas.captureStream(30);
+    var finalStream;
+
+    if (!isMuted) {
+      try {
+        if (!audioCtx || audioCtx.state === 'closed') {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          audioSrc = audioCtx.createMediaElementSource(vid);
+        }
+        if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+        var gain = audioCtx.createGain();
+        gain.gain.value = vol;
+        var dest = audioCtx.createMediaStreamDestination();
+        try { audioSrc.disconnect(); } catch (e2) {}
+        audioSrc.connect(gain);
+        gain.connect(dest);
+        gain.connect(audioCtx.destination);
+        var aTrack = dest.stream.getAudioTracks()[0];
+        finalStream = aTrack
+          ? new MediaStream(canvasStream.getVideoTracks().concat([aTrack]))
+          : canvasStream;
+      } catch (err) {
+        console.warn('Audio capture fallback:', err);
+        finalStream = canvasStream;
+      }
+    } else {
+      finalStream = new MediaStream(canvasStream.getVideoTracks());
+    }
+
+    /* Pick best supported mime */
+    var mimes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    var mime = 'video/webm';
+    for (var i = 0; i < mimes.length; i++) { if (MediaRecorder.isTypeSupported(mimes[i])) { mime = mimes[i]; break; } }
+
+    var chunks = [];
+    var recorder;
+    try { recorder = new MediaRecorder(finalStream, { mimeType: mime, videoBitsPerSecond: 8000000 }); }
+    catch (e) {
+      try { recorder = new MediaRecorder(finalStream); }
+      catch (e2) { alert('MediaRecorder not supported. Please use Chrome or Firefox.'); resetExportBtn(); return; }
+    }
+
+    recorder.ondataavailable = function (ev) { if (ev.data && ev.data.size > 0) chunks.push(ev.data); };
+
+    var clipDur = (endT - startT) / spd;
+    var progInt;
+
+    recorder.onstart = function () {
+      var t0 = Date.now();
+      progInt = setInterval(function () {
+        var el  = (Date.now() - t0) / 1000;
+        var pct = Math.min(93, Math.round((el / clipDur) * 88) + 5);
+        setProgress(pct, 'Recording: ' + el.toFixed(1) + 's / ' + clipDur.toFixed(1) + 's');
+      }, 250);
+    };
+
+    recorder.onstop = function () {
+      cancelAnimationFrame(rafId);
+      clearInterval(progInt);
+      vid.pause();
+      setProgress(100, 'Done!');
+      if (outBlob) URL.revokeObjectURL(outBlob);
+      var blob = new Blob(chunks, { type: mime });
+      outBlob = URL.createObjectURL(blob);
+      setTimeout(function () {
+        progressCard.style.display = 'none';
+        doneCard.style.display      = 'block';
+        resetExportBtn();
+        triggerDownload();
+      }, 400);
+    };
+
+    recorder.onerror = function (err) {
+      console.error('Recorder error:', err);
+      cancelAnimationFrame(rafId);
+      clearInterval(progInt);
+      vid.pause();
+      alert('Recording failed. Please try again.');
+      progressCard.style.display = 'none';
+      resetExportBtn();
+    };
+
+    /* Seek then record */
+    vid.volume = isMuted ? 0 : vol;
+    vid.muted  = isMuted;
+    vid.currentTime = startT;
+
+    var didSeek = false;
+    function afterSeek() {
+      if (didSeek) return;
+      didSeek = true;
+      vid.onseeked = null;
+      vid.playbackRate = spd;
+      drawFrame();
+      recorder.start(100);
+      vid.play().catch(function (e) { console.warn('play() rejected:', e); });
+
+      function checkEnd() {
+        if (recorder.state !== 'recording') return;
+        if (vid.currentTime >= endT - 0.04 || vid.ended) { recorder.stop(); return; }
+        requestAnimationFrame(checkEnd);
+      }
+      requestAnimationFrame(checkEnd);
+
+      /* Hard timeout safety */
+      setTimeout(function () { if (recorder.state === 'recording') recorder.stop(); }, (clipDur + 4) * 1000);
+    }
+
+    vid.onseeked = afterSeek;
+    setTimeout(afterSeek, 1500); /* fallback if onseeked never fires */
+  }
+
+  function setProgress(pct, label) {
+    progBar.style.width     = pct + '%';
+    progPct.textContent     = pct + '%';
+    progLabel.textContent   = label;
+  }
+
+  function resetExportBtn() {
+    btnExport.disabled    = false;
+    btnExport.textContent = 'Save and Download Video';
+  }
+
+  function triggerDownload() {
+    if (!outBlob) return;
+    var a = document.createElement('a');
+    a.href     = outBlob;
+    a.download = 'clipcraft_' + Date.now() + '.webm';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { document.body.removeChild(a); }, 100);
+  }
+
+  btnDownload.addEventListener('click', triggerDownload);
+
+  /* =============================================
+     RESET
+  ============================================= */
+  resetBtn.addEventListener('click', function () {
+    vid.pause();
+    vid.removeAttribute('src');
+    vid.load();
+    if (srcBlob) { URL.revokeObjectURL(srcBlob); srcBlob = null; }
+    if (outBlob) { URL.revokeObjectURL(outBlob); outBlob = null; }
+    if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; audioSrc = null; }
+    fileInput.value = '';
+    speed = 1.0; cropOn = false;
+
+    dropzoneWrap.style.display = '';
+    playerView.style.display   = 'none';
+    resetBtn.style.display      = 'none';
+    doneCard.style.display      = 'none';
+    progressCard.style.display  = 'none';
+    hideCropOverlay();
+
+    cropToggle.textContent = 'Enable Crop';
+    cropToggle.classList.remove('active');
+    setActiveCropBtn('original');
+
+    document.querySelectorAll('[data-speed]').forEach(function (b) { b.classList.remove('active'); });
+    var s1 = document.querySelector('[data-speed="1"]');
+    if (s1) s1.classList.add('active');
+
+    volSlider.value = 100; volBadge.textContent = '100%'; volIcon.innerHTML = '&#128266;'; muteChk.checked = false;
+
+    btnExport.disabled    = true;
+    btnExport.textContent = 'Upload a Video First';
+  });
+
+})();
+</script>
+</body>
+</html>
