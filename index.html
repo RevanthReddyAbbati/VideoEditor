@@ -64,6 +64,18 @@ body{font-family:'Inter',sans-serif;background:#0b0f19;color:#f1f5f9;min-height:
 .control-card{background:rgba(2,6,23,0.5);border:1px solid #1e293b;border-radius:12px;padding:14px}
 .row-between{display:flex;justify-content:space-between;align-items:center}
 
+/* DISABLED (controls lock while an export is running, so nothing shifts mid-record) */
+.grid-btn:disabled,.fmt-btn:disabled,.crop-toggle-btn:disabled,.filter-reset-btn:disabled,.quick-btn:disabled{opacity:0.4;cursor:not-allowed;pointer-events:none}
+input[type=range]:disabled{opacity:0.4;cursor:not-allowed}
+input[type=checkbox]:disabled{opacity:0.4;cursor:not-allowed}
+
+/* SIZE / TIME ESTIMATE */
+.estimate-row{display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #1e293b}
+.estimate-item{display:flex;flex-direction:column;align-items:center;flex:1;gap:2px}
+.estimate-val{font-size:15px;font-weight:700;color:#60a5fa}
+.estimate-key{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em}
+.estimate-hint{font-size:10px;color:#475569;line-height:1.5;margin-top:8px}
+
 /* RANGE */
 .slider-row{display:flex;flex-direction:column;gap:6px}
 .slider-row+.slider-row{margin-top:14px}
@@ -242,7 +254,18 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
             <div class="slider-label">End: <strong id="lbl-end">0.0s</strong></div>
             <input type="range" id="trim-end" min="0" max="100" value="100" step="0.1">
           </div>
+          <div class="estimate-row">
+            <div class="estimate-item">
+              <span class="estimate-val" id="est-duration">0:00</span>
+              <span class="estimate-key">Output Length</span>
+            </div>
+            <div class="estimate-item">
+              <span class="estimate-val" id="est-size">-- MB</span>
+              <span class="estimate-key">Est. File Size</span>
+            </div>
+          </div>
         </div>
+        <p class="estimate-hint">Export runs in real time, so it takes about as long as the output length above. Switching tabs is safe — export pauses and resumes automatically — but keeping this tab open gets you done fastest.</p>
       </div>
 
       <!-- SPEED -->
@@ -376,7 +399,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
             <span class="progress-pct" id="prog-pct">0%</span>
           </div>
           <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-bar"></div></div>
-          <p class="progress-hint">Keep this tab active while processing.</p>
+          <p class="progress-hint">Runs in real time. If you switch tabs, export pauses and resumes automatically — just keep this tab open.</p>
         </div>
 
         <div class="done-card" id="done-card">
@@ -465,6 +488,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
   var exportFmt = 'webm';
   var exportQual= 8000000; /* bps */
   var currentFile = null;
+  var activeRecorder = null;
+  var exportAborted = false;
 
   var cd = { top:0, left:0, w:100, h:100 };
   var dg = { on:false, resize:false, handle:'', sx:0, sy:0, bl:0, bt:0, bw:0, bh:0 };
@@ -530,6 +555,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
       document.getElementById('info-fps').textContent = '~30';
       setTimeout(function(){ resetCrop(); }, 300);
       unlockExport();
+      updateEstimate();
     };
     if(vid.readyState>=1 && isFinite(vid.duration) && vid.duration>0) vid.onloadedmetadata();
   }
@@ -539,12 +565,42 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
     return m+':'+(sec<10?'0':'')+sec;
   }
   function formatBytes(b){
+    if(b>=1073741824) return (b/1073741824).toFixed(2)+' GB';
     if(b>1048576) return (b/1048576).toFixed(1)+' MB';
     return (b/1024).toFixed(0)+' KB';
   }
   function unlockExport(){
     btnExport.disabled=false;
     btnExport.textContent='Save and Download Video';
+  }
+
+  /* Live "how big / how long" readout shown under the trim sliders.
+     Recomputed whenever trim range, speed, quality, or mute state changes. */
+  function updateEstimate(){
+    if(!srcBlob || !isFinite(vid.duration) || vid.duration<=0) return;
+    var s=parseFloat(trimStartEl.value), e=parseFloat(trimEndEl.value);
+    if(!(e>s)) return;
+    var outDur = (e-s)/speed;
+    var isMuted = muteChk.checked || parseInt(volSlider.value,10)===0;
+    var audioBps = isMuted ? 0 : 128000; /* rough Opus estimate */
+    var estBytes = outDur*(exportQual+audioBps)/8;
+    var elD=document.getElementById('est-duration');
+    var elS=document.getElementById('est-size');
+    if(elD) elD.textContent = formatTime(outDur);
+    if(elS) elS.textContent = '~'+formatBytes(estBytes);
+  }
+
+  /* Locks every editing control while an export is running, so nothing
+     (crop rect, filters, trim range) can change out from under the recorder. */
+  function setControlsEnabled(enabled){
+    var d = !enabled;
+    trimStartEl.disabled=d; trimEndEl.disabled=d;
+    volSlider.disabled=d; muteChk.disabled=d;
+    slBrightness.disabled=d; slContrast.disabled=d; slSaturation.disabled=d; slBlur.disabled=d; slOpacity.disabled=d;
+    filterReset.disabled=d;
+    cropToggle.disabled=d;
+    btnFlipH.disabled=d; btnFlipV.disabled=d; btnRot90.disabled=d; btnLoop.disabled=d; btnSnapshot.disabled=d;
+    document.querySelectorAll('[data-speed],[data-preset],[data-crop],[data-fmt],[data-qual]').forEach(function(b){ b.disabled=d; });
   }
 
   /* ============================================
@@ -556,10 +612,12 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
     vid.volume=v/100;
     if(v===0){ muteChk.checked=true; vid.muted=true; volIcon.innerHTML='&#128263;'; }
     else { muteChk.checked=false; vid.muted=false; volIcon.innerHTML=v<50?'&#128265;':'&#128266;'; }
+    updateEstimate();
   });
   muteChk.addEventListener('change', function(){
     if(muteChk.checked){ vid.muted=true; volSlider.value=0; volBadge.textContent='0%'; volIcon.innerHTML='&#128263;'; }
     else { vid.muted=false; volSlider.value=100; vid.volume=1; volBadge.textContent='100%'; volIcon.innerHTML='&#128266;'; }
+    updateEstimate();
   });
 
   /* ============================================
@@ -571,6 +629,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
     lblStart.textContent=s.toFixed(1)+'s';
     vid.currentTime=s;
     if(loopOn) restartLoop();
+    updateEstimate();
   });
   trimEndEl.addEventListener('input', function(){
     var e=parseFloat(trimEndEl.value), s=parseFloat(trimStartEl.value);
@@ -578,6 +637,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
     lblEnd.textContent=e.toFixed(1)+'s';
     vid.currentTime=e;
     if(loopOn) restartLoop();
+    updateEstimate();
   });
 
   /* ============================================
@@ -589,6 +649,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
       btn.classList.add('active');
       speed=parseFloat(btn.getAttribute('data-speed'));
       vid.playbackRate=speed;
+      updateEstimate();
     });
   });
 
@@ -801,6 +862,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
       document.querySelectorAll('[data-qual]').forEach(function(b){ b.classList.remove('active'); });
       btn.classList.add('active');
       exportQual=QUAL_MAP[btn.getAttribute('data-qual')];
+      updateEstimate();
     });
   });
 
@@ -815,6 +877,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
     btnExport.textContent='Processing...';
     doneCard.style.display='none';
     progressCard.style.display='block';
+    setControlsEnabled(false);
     setProgress(5,'Setting up...');
     setTimeout(runExport,80);
   });
@@ -825,8 +888,9 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
     var isMuted = muteChk.checked||parseInt(volSlider.value,10)===0;
     var vol     = parseInt(volSlider.value,10)/100;
     var spd     = speed;
+    var clipDur = (endT-startT)/spd;
 
-    /* Canvas crop rect in native video pixels */
+    /* Canvas crop rect in native video pixels (controls are locked during export) */
     var cX=0, cY=0;
     var cW=vid.videoWidth||640;
     var cH=vid.videoHeight||360;
@@ -845,22 +909,32 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
 
     exportCanvas.width=outW;
     exportCanvas.height=outH;
-    var ctx=exportCanvas.getContext('2d');
-    var rafId;
+    var ctx=exportCanvas.getContext('2d',{alpha:false});
 
+    /* Precompute filter usage once so a no-op filter never costs a frame of CPU.
+       Controls are locked for the duration of the export, so this can't go stale. */
+    var filterStr = buildCSSFilter();
+    var hasFilter = (filters.brightness!==100||filters.contrast!==100||filters.saturation!==100||filters.blur!==0||filters.opacity!==100);
+
+    /* requestVideoFrameCallback fires once per decoded frame instead of once per
+       display refresh, so it tracks the actual video rather than the screen. */
+    var useRVFC = typeof vid.requestVideoFrameCallback === 'function';
+    function scheduleFrame(cb){ return useRVFC ? vid.requestVideoFrameCallback(cb) : requestAnimationFrame(cb); }
+    function cancelFrame(id){ if(id==null) return; if(useRVFC){ try{ vid.cancelVideoFrameCallback(id); }catch(e){} } else { cancelAnimationFrame(id); } }
+
+    var rafId=null;
     function drawFrame(){
-      ctx.save();
-      ctx.clearRect(0,0,outW,outH);
-      /* Apply CSS-equivalent filter via canvas filter */
-      ctx.filter=buildCSSFilter();
-      /* Apply rotation + flip transforms */
-      ctx.translate(outW/2,outH/2);
-      ctx.rotate(rotation*Math.PI/180);
-      ctx.scale(flipH?-1:1, flipV?-1:1);
-      /* Draw the (possibly cropped) region centered */
-      try{ ctx.drawImage(vid,cX,cY,cW,cH,-cW/2,-cH/2,cW,cH); }catch(e){}
-      ctx.restore();
-      rafId=requestAnimationFrame(drawFrame);
+      if(!document.hidden){
+        ctx.save();
+        ctx.clearRect(0,0,outW,outH);
+        ctx.filter = hasFilter ? filterStr : 'none';
+        ctx.translate(outW/2,outH/2);
+        ctx.rotate(rotation*Math.PI/180);
+        ctx.scale(flipH?-1:1, flipV?-1:1);
+        try{ ctx.drawImage(vid,cX,cY,cW,cH,-cW/2,-cH/2,cW,cH); }catch(e){}
+        ctx.restore();
+      }
+      rafId=scheduleFrame(drawFrame);
     }
 
     var canvasStream=exportCanvas.captureStream(30);
@@ -887,23 +961,86 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
     var chunks=[];
     var recorder;
     try{ recorder=new MediaRecorder(finalStream,{mimeType:mime,videoBitsPerSecond:exportQual}); }
-    catch(e){ try{ recorder=new MediaRecorder(finalStream); }catch(e2){ alert('MediaRecorder not supported. Use Chrome or Firefox.'); resetExportBtn(); return; } }
+    catch(e){ try{ recorder=new MediaRecorder(finalStream); }catch(e2){ alert('MediaRecorder not supported. Use Chrome or Firefox.'); resetExportBtn(); setControlsEnabled(true); return; } }
 
+    activeRecorder = recorder;
     recorder.ondataavailable=function(ev){ if(ev.data&&ev.data.size>0) chunks.push(ev.data); };
-    var clipDur=(endT-startT)/spd, progInt;
+
+    var progInt=null, activeMs=0, lastTick=null, wakeLockRef=null;
+
+    /* Independent, generous last-resort breaker: fires even if onstart never
+       does, so an export can never hang forever. Normal completion happens
+       well before this via the progInt watcher below. */
+    var hardSafetyTimeout=setTimeout(function(){
+      if(recorder.state==='recording'||recorder.state==='paused'){
+        console.warn('Export safety timeout reached, forcing stop.');
+        try{ recorder.stop(); }catch(e){}
+      }
+    }, Math.max(30000, clipDur*4000+60000));
+
+    function releaseWakeLock(){ if(wakeLockRef){ try{ wakeLockRef.release(); }catch(e){} wakeLockRef=null; } }
+    function requestWakeLock(){
+      if('wakeLock' in navigator){
+        navigator.wakeLock.request('screen').then(function(wl){ wakeLockRef=wl; }).catch(function(){});
+      }
+    }
+
+    /* This is the core fix for the freezing bug: rather than let the canvas
+       draw loop silently stall (and MediaRecorder keep encoding a stale
+       frame) when the tab is backgrounded, we explicitly pause the recorder
+       and the source video together, then resume both together. */
+    function handleVisibilityChange(){
+      if(!recorder) return;
+      if(document.hidden){
+        if(recorder.state==='recording'){
+          try{ recorder.pause(); }catch(e){}
+          vid.pause();
+          lastTick=null;
+          var curPct=parseInt(progBar.style.width,10); if(isNaN(curPct)) curPct=5;
+          setProgress(curPct, 'Paused (tab hidden) — return to this tab to continue');
+        }
+      } else {
+        if(recorder.state==='paused'){
+          vid.play().catch(function(){});
+          try{ recorder.resume(); }catch(e){}
+          requestWakeLock();
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    function cleanupTimers(){
+      if(progInt){ clearInterval(progInt); progInt=null; }
+      if(hardSafetyTimeout){ clearTimeout(hardSafetyTimeout); hardSafetyTimeout=null; }
+      cancelFrame(rafId); rafId=null;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      releaseWakeLock();
+      activeRecorder = null;
+    }
 
     recorder.onstart=function(){
-      var t0=Date.now();
+      requestWakeLock();
+      lastTick=Date.now();
       progInt=setInterval(function(){
-        var el=(Date.now()-t0)/1000;
-        var pct=Math.min(93,Math.round((el/clipDur)*88)+5);
-        setProgress(pct,'Recording: '+el.toFixed(1)+'s / '+clipDur.toFixed(1)+'s');
+        if(recorder.state!=='recording') return;
+        var now=Date.now();
+        if(lastTick!=null) activeMs+=(now-lastTick);
+        lastTick=now;
+
+        /* Progress and completion are driven by the video's own currentTime,
+           not by an assumption of perfect real-time wall clock. */
+        var elapsedClip=Math.max(0, vid.currentTime-startT);
+        var pct=Math.min(93, Math.round((elapsedClip/Math.max(0.001,(endT-startT)))*88)+5);
+        setProgress(pct, 'Recording: '+formatTime(elapsedClip/spd)+' / '+formatTime(clipDur));
+
+        if(vid.currentTime>=endT-0.04||vid.ended){ try{ recorder.stop(); }catch(e){} return; }
+        if(activeMs > (clipDur*1500+15000)){ console.warn('Export watchdog: forcing stop'); try{ recorder.stop(); }catch(e){} }
       },250);
     };
 
     recorder.onstop=function(){
-      cancelAnimationFrame(rafId);
-      clearInterval(progInt);
+      cleanupTimers();
+      if(exportAborted){ exportAborted=false; return; }
       vid.pause();
       setProgress(100,'Done!');
       if(outBlob) URL.revokeObjectURL(outBlob);
@@ -917,18 +1054,19 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
         progressCard.style.display='none';
         doneCard.style.display='block';
         resetExportBtn();
+        setControlsEnabled(true);
         triggerDownload(ext);
       },400);
     };
 
     recorder.onerror=function(err){
       console.error('Recorder error:',err);
-      cancelAnimationFrame(rafId);
-      clearInterval(progInt);
+      cleanupTimers();
       vid.pause();
       alert('Recording failed. Please try again.');
       progressCard.style.display='none';
       resetExportBtn();
+      setControlsEnabled(true);
     };
 
     vid.volume=isMuted?0:vol;
@@ -944,13 +1082,6 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
       drawFrame();
       recorder.start(100);
       vid.play().catch(function(e){ console.warn('play() rejected:',e); });
-      function checkEnd(){
-        if(recorder.state!=='recording') return;
-        if(vid.currentTime>=endT-0.04||vid.ended){ recorder.stop(); return; }
-        requestAnimationFrame(checkEnd);
-      }
-      requestAnimationFrame(checkEnd);
-      setTimeout(function(){ if(recorder.state==='recording') recorder.stop(); },(clipDur+4)*1000);
     }
     vid.onseeked=afterSeek;
     setTimeout(afterSeek,1500);
@@ -979,6 +1110,10 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
   ============================================ */
   resetBtn.addEventListener('click', function(){
     clearLoopTimer();
+    if(activeRecorder){
+      try{ if(activeRecorder.state!=='inactive'){ exportAborted=true; activeRecorder.stop(); } }catch(e){}
+      activeRecorder=null;
+    }
     vid.pause(); vid.removeAttribute('src'); vid.load();
     if(srcBlob){ URL.revokeObjectURL(srcBlob); srcBlob=null; }
     if(outBlob){ URL.revokeObjectURL(outBlob); outBlob=null; }
@@ -1016,6 +1151,9 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#3b82f6;bo
 
     volSlider.value=100; volBadge.textContent='100%'; volIcon.innerHTML='&#128266;'; muteChk.checked=false;
     btnExport.disabled=true; btnExport.textContent='Upload a Video First';
+    setControlsEnabled(true);
+    var elD=document.getElementById('est-duration'); if(elD) elD.textContent='0:00';
+    var elS=document.getElementById('est-size'); if(elS) elS.textContent='-- MB';
   });
 
 })();
